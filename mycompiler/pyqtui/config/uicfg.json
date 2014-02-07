@@ -1,0 +1,69 @@
+{
+    "cFlags": {
+        "Optimization": [
+            "-O1", 
+            "-O2", 
+            "-O3"
+        ], 
+        "All": [
+            "-Wstrict-aliasing", 
+            "-ansi", 
+            "-Wshadow", 
+            "-Wpedantic", 
+            "-std=c99", 
+            "-O2", 
+            "-O3", 
+            "-O1", 
+            "-Wextra", 
+            "-std=c90", 
+            "-c", 
+            "-std=c11", 
+            "-S", 
+            "-Wcast-qual", 
+            "-E", 
+            "-Wall", 
+            "-Wmissing-declarations", 
+            "-Wformat=2", 
+            "-Wstrict-prototypes", 
+            "-Wfatal-errors", 
+            "-Wuninitialized", 
+            "-Wpointer-arith", 
+            "-Wcast-align", 
+            "-Werror", 
+            "-Wmissing-prototypes"
+        ], 
+        "Standard": [
+            "-Wall", 
+            "-Wextra", 
+            "-std=c11"
+        ], 
+        "Language": [
+            "-std=c11", 
+            "-std=c99", 
+            "-std=c90", 
+            "-ansi"
+        ], 
+        "Output": [
+            "-c", 
+            "-S", 
+            "-E"
+        ], 
+        "Warnings": [
+            "-Wall", 
+            "-Werror", 
+            "-Wextra", 
+            "-Wfatal-errors", 
+            "-Wpedantic", 
+            "-Wshadow", 
+            "-Wpointer-arith", 
+            "-Wcast-qual", 
+            "-Wmissing-prototypes", 
+            "-Wstrict-prototypes", 
+            "-Wuninitialized", 
+            "-Wstrict-aliasing", 
+            "-Wcast-align", 
+            "-Wformat=2", 
+            "-Wmissing-declarations"
+        ]
+    }
+}
