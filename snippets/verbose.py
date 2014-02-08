@@ -1,48 +1,49 @@
-''' This is the most godawful module in existance.
+'''
+This is the most godawful module in existance.
 Reader beware.
 
 '''
+from io import StringIO
+import atexit
 
+__pfc_iobuffer = StringIO()
+__pfc_tracefile = r'C:/Users/Administrator/Documents/Programming/pfc_tracefile.txt'
+logfile = __pfc_tracefile
 
-pfc_tracefile = r'C:/Users/Administrator/Documents/Programming/pfc_tracefile.txt'
-
-pfc_ignore = ['write_code',
+pfc_ignore = [
               '__init__',
               '__new__',
-              '_pfc'
+              'pfc_wrapper',
+              'pfc'
               ]
 
 
-class HerpADerpError(Exception):
-    pass
-
-
-__pfc_tracefile = open(pfc_tracefile, 'w')
-
-
-def pfc(func, tracefile=__pfc_tracefile):
+def pfc(func):
 
     if func.__name__ in pfc_ignore:
         return func
+
+    buf = __pfc_iobuffer
+    __pfcmsg = func.__qualname__ + " called\n\n"
     
-    __pfcmsg = "%s called\n\n" % func.__qualname__
-    
-    def _pfc(*args, **kwargs):
+    def pfc_wrapper(*args, **kwargs):
+        nonlocal buf
         print(__pfcmsg)
-        tracefile.write(__pfcmsg)
+        buf.write(__pfcmsg)
         return func(*args, **kwargs)
+    return pfc_wrapper
 
-    return _pfc
 
+def __commit_log():
 
-def closefile():
-    print("file closed!")
-    global __pfc_tracefile
+    bufval = __pfc_iobuffer.getvalue()
+    if not bufval:
+        return
 
-    __pfc_tracefile.close()
+    with open(logfile, 'w') as f:
+        f.write(bufval)
 
-import atexit
-atexit.register(closefile)
+atexit.register(__commit_log)
 
 
 class VerboseDict(dict):

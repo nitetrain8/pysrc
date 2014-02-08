@@ -1,11 +1,13 @@
 __author__ = 'Administrator'
 '''Created on 1/16/14'''
 
-from mycompiler.pyqtui.base import MyUiBase
-from PyQt5.uic.Compiler.indenter import getIndenter, write_code
-from PyQt5.uic.Compiler import qtproxies
 from datetime import datetime
 from os import makedirs
+
+from PyQt5.uic.Compiler.indenter import getIndenter, write_code
+from PyQt5.uic.Compiler import qtproxies
+
+from guicompiler.guicompilerbase import _GuiCompiler
 
 
 uifile = 'C:\\Python33\\Lib\\site-packages\\PyQt5\\myprojects\\ui\\MyIDE.ui'
@@ -18,10 +20,10 @@ backup_folder = 'C:\\Users\\Administrator\\Documents\\Programming\\PythonSource\
 controller_file_backup = "uicontroller%m%d%Y%H%M.py"
 
 
-class PyQtGuiCompiler(MyUiBase):
+class PyQtGuiCompiler(_GuiCompiler):
     '''The main class to use to hook into the UIC api.
 
-    Inherit MyUiBase for debugging purposes, eventually should
+    Inherit _GuiCompiler for debugging purposes, eventually should
     just inherit UIcompiler directly with no special metaclass.
 
     Class for writing files related to ui
@@ -279,7 +281,7 @@ class PyQtGuiCompiler(MyUiBase):
     # hook/unhook UICompiler's createConnections
     # first sets class variable to default
     # second saves a hard reference to swap at will
-    createConnections = MyUiBase.createConnections
+    createConnections = _GuiCompiler.createConnections
     super_createConnections = createConnections
 
     def hookConnections(self):

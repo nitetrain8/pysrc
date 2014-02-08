@@ -7,13 +7,14 @@ Created in: PyCharm Community Edition
 
 
 '''
-from mycompiler.pyqtui.base import MyUiBase
-from mycompiler.pyqtui.uicontroller import UiController
-
-from PyQt5.uic.Compiler.indenter import getIndenter, write_code as write_view_code
-from classwriter import *
 from datetime import datetime
 from os import makedirs
+
+from PyQt5.uic.Compiler.indenter import getIndenter, write_code as write_view_code
+
+from guicompiler.base import MyUiBase
+from mycompiler.pyqtui.uicontroller import UiController
+from classwriter import *
 
 
 uifile = 'C:\\Python33\\Lib\\site-packages\\PyQt5\\myprojects\\ui\\MyIDE.ui'

@@ -1,4 +1,4 @@
-from mycompiler.pyqtui.base import UiControllerBase
+from guicompiler.uicbase import UiControllerBase
 
 
 class UiController(UiControllerBase):

@@ -1,4 +1,5 @@
-from mycompiler.pyqtui.base import UiControllerBase
+from guicompiler.uicbase import UiControllerBase
+
 
 @# noinspection PyMethodMayBeStatic
 class UiController(UiControllerBase):

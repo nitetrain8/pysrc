@@ -1,5 +1,4 @@
-from mycompiler.pyqtui.base import UiControllerBase
-from PyQt5.QtWidgets import QMainWindow
+from guicompiler.uicbase import UiControllerBase
 
 
 # noinspection PyMethodMayBeStatic

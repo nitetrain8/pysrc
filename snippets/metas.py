@@ -186,15 +186,15 @@ def EmptyMethod(method, clsname=""):
     return _EmptyWarning
 
 
-def EmptyMethodMeta(cls, bases, kwargs):
+def EmptyMethodMeta(name, bases, kwargs):
     
     # noinspection PyUnresolvedReferences
     emptycode = __empty.__code__.co_code
     for k, v in kwargs.items():
         if isinstance(v, FunctionType) and v.__code__.co_code == emptycode:
-            kwargs[k] = EmptyMethod(v, cls)
+            kwargs[k] = EmptyMethod(v, name)
     
-    return cls, bases, kwargs
+    return name, bases, kwargs
 
 
 def EmptyMethodDecorator(cls):
