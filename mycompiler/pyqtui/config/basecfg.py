@@ -51,7 +51,7 @@ def default_cflags():
         'Warnings': warnings,
         'Language': language,
         'Optimization': optimization,
-        "Output": output,
+        'Compiler Output': output,
         'All': All
     }
 

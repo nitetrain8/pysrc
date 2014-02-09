@@ -8,7 +8,7 @@ Created in: PyCharm Community Edition
 
 '''
 
-from os.path import dirname as path_dirname, exists as path_exists
+from os.path import dirname as path_dirname
 import json
 
 
@@ -20,13 +20,11 @@ def load_cfg():
     return cfg_ops
 
 
-
-
 if __name__ == '__main__':
     try:
         cfg = load_cfg()
     except:
-        import basecfg
+        from config import basecfg
         basecfg.rebuild_cfg()
         cfg = load_cfg()
 
