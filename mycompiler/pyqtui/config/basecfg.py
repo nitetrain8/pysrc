@@ -1,4 +1,4 @@
-'''
+"""
 
 Created on Jan 12, 2014
 
@@ -7,7 +7,7 @@ C:/Users/Administrator/Documents/Programming/PythonSource/source/mycompiler/pyqt
 
 Rebuild default config file settings from hard-coded defaults.
 Provide access to hard-coded defaults if desired.
-'''
+"""
 
 import json
 from itertools import chain
@@ -19,10 +19,10 @@ JSON_INDENT = 4
 
 
 def default_cflags():
-    '''
+    """
     @return: mapping of cflags categories to list of specific flags
     @rtype: dict
-    '''
+    """
 
     standard = ["-Wall", '-Wextra', '-std=c11']
     warnings = ["-Wall", '-Werror', '-Wextra', '-Wfatal-errors', '-Wpedantic', '-Wshadow', '-Wpointer-arith',
@@ -59,14 +59,14 @@ def default_cflags():
 
 
 def default_cfg():
-    '''
+    """
     @return: mapping of config file sections
     @rtype: dict
 
     Call specific functions default functions to
     build the full dict of default config options.
 
-    '''
+    """
     cfg_ops = {
                 'cFlags' : default_cflags()
                 }
@@ -75,13 +75,13 @@ def default_cfg():
 
 
 def rebuild_cfg():
-    '''
+    """
     @return: None
     @rtype: None
 
     Rebuild the config file from hardcoded defaults. Overrides
     any existing file!
-    '''
+    """
     cfg = default_cfg()
 
     with open(jsonfile, 'w') as f:

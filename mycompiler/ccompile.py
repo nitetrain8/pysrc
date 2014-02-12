@@ -22,7 +22,7 @@ class CCBase(metaclass=CCMeta):
 
 class CCompiler(CCBase):
     
-    '''Actual CCompiler class vars'''
+    """Actual CCompiler class vars"""
     
     main_dir = "C:/Users/Administrator/Csrc"
     cmp_dir = "%s/active" % main_dir
@@ -137,16 +137,16 @@ class CCompiler(CCBase):
                              
     def _askfilescaller(self):
         
-        '''Event handler for pressing "Compile" button.
+        """Event handler for pressing "Compile" button.
         Open tkinter AskOpenFilenames dialog.
-        
+
         dialog initialdir = last accessed dir or main dir
         dialog filetypes = c source types (.c, .h, or all .*)
-        
+
         if files selected, set last dir and call func to update
-        sources list. 
-        
-        '''
+        sources list.
+
+        """
         
         initialdir = self.lastdir if self.lastdir else self.main_dir
             
@@ -168,14 +168,14 @@ class CCompiler(CCBase):
     
     def UpdateSrcList(self, sources):
         
-        '''Handle updating of source list
-            Todo: everything. '''
+        """Handle updating of source list
+            Todo: everything. """
         
         self.sources = sources
         
         
     def Compile(self):
-        '''Actually compile stuff'''
+        """Actually compile stuff"""
         
         '''for args that are lists, combine to appropriate strings'''
         _src = ''.join(["\"", '\" \"'.join(self._src), "\""])

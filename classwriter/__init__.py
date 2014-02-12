@@ -13,7 +13,7 @@ from classwriter.objproxies import ArgsProxy, FunctionProxy, ClassProxy, MethodP
 
 # noinspection PyMethodMayBeStatic
 class ClassWriter():
-    ''' This class should be written to be responsible for
+    """ This class should be written to be responsible for
     accepting some sort of contextual information from
     an outside source, and compiling a class body template
     according to that information.
@@ -30,10 +30,10 @@ class ClassWriter():
     information into a form that is easily extensible by human
     readers.
 
-    '''
+    """
 
     def __init__(self):
-        '''Initialize writer with module level settings.
+        """Initialize writer with module level settings.
         The module settings and writer logic take care of
         everything. Fire and forget.
 
@@ -46,20 +46,20 @@ class ClassWriter():
         commit the write.
 
         save init args in case any context setup is required.
-        '''
+        """
 
         self.level = 0
         self.write_buffer = []
 
     def compileClass(self, klass: ClassProxy, outfile=None) -> None:
-        '''
+        """
         @param klass: classproxy to compile
         @type klass: ClassProxy
         @param outfile: file-like object (file, StringIO with a 'write' method)
         @type outfile: file-like object
         @return: None
         @rtype: None
-        '''
+        """
         # This seems a bit silly, but may be necessary later
         # if extra functionality required.
 
@@ -90,7 +90,7 @@ class ClassWriter():
             self.Commit(outfile)
 
     def write_code(self, code: str):
-        '''
+        """
         @param code: line of code to write
         @type code: string
         @return: None
@@ -98,7 +98,7 @@ class ClassWriter():
 
         If class needs to extended to maintain multiple buffers,
         write to a buffer stored in a dict keyed by klass's name.
-        '''
+        """
 
         self.write_buffer.append('\n' + code)
 
@@ -131,23 +131,23 @@ class ClassWriter():
         return self.level * '    '
 
     def build_class_doc(self, klass: ClassProxy) -> str:
-        '''
+        """
         @param klass: ClassProxy
         @type klass: ClassProxy
         @return: docstring, indented to writer's current level
         @rtype: string
 
         Handle any special class-specific docstringing.
-        '''
+        """
         doc = klass.doc
         doc = self._build_proxy_doc(doc)
 
         return self._build_proxy_doc(doc)
 
     def _build_proxy_doc(self, doc: str) -> str:
-        '''Parse the klass doc and make sure that it
+        """Parse the klass doc and make sure that it
         gets indented correctly
-        '''
+        """
         doc = [line.strip() for line in doc.strip().split('\n')]
         doc[0] = self.spacer + doc[0]
         doc_str = ('\n' + self.spacer).join(doc)
@@ -189,12 +189,12 @@ class ClassWriter():
         return code
 
     def build_arg_string(self, args: ArgsProxy) -> str:
-        '''
+        """
         @param args: Args instance with properly set values
         @type args: ArgsProxy
         @return: string of args in parenthesis as would be found in func def
         @rtype: str
-        '''
+        """
 
         pos_only_string = ', '.join(args.positional_only)
         pos_default_string = ', '.join("%s=%s" % (arg, val)
@@ -229,14 +229,14 @@ class ClassWriter():
         return self.spacer + ('\n' + self.spacer).join(body)
 
     def build_function_doc(self, func: FunctionProxy) -> str:
-        '''
+        """
         @param func: FunctionProxy
         @type func: FunctionProxy
         @return: docstring, indented to writer's current level
         @rtype: string
 
         Use for any special func-doc-related parsing
-        '''
+        """
 
         doc = func.doc
         if not doc:
@@ -265,11 +265,11 @@ class ClassWriter():
         outfile.write(code)
 
     def reset(self):
-        '''
+        """
         @return: None
         @rtype: None
         Reset everything
-        '''
+        """
 
         self.write_buffer = []
         self.level = 0

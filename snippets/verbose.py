@@ -1,8 +1,8 @@
-'''
+"""
 This is the most godawful module in existance.
 Reader beware.
 
-'''
+"""
 from io import StringIO
 import atexit
 
