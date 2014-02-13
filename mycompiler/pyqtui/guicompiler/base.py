@@ -1,4 +1,4 @@
-''' This module was made during the proof of concept stage.
+""" This module was made during the proof of concept stage.
 It sucks. The whole snippets.metas thing is a mess.
 
 Metaclassing is a mess. Actually, metaclassing is a nice
@@ -14,7 +14,7 @@ empty base class to allow metaclass access by subclassing
 is a quick and centralized way to turn on/turn off various
 meta-behaviors which will be useful during the debugging stage.
 
-'''
+"""
 
 from PyQt5.uic.Compiler.compiler import UICompiler
 

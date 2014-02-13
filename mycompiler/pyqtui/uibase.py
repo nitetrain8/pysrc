@@ -57,7 +57,7 @@ class DebugControllerMeta(type):
 
 
 class UiControllerBase(metaclass=DebugControllerMeta):
-    ''' Base class for the UiController. Attach debugging
+    """ Base class for the UiController. Attach debugging
     decorators and metaclasses to the metaclass.
-    '''
+    """
     pass

@@ -14,9 +14,9 @@ class ProxyError(Exception):
 
 
 class ArgsProxy():
-    '''Helper class to make working with
+    """Helper class to make working with
     args for FunctionProxy easier.
-    '''
+    """
     __slots__ = [
         'positional_only',
         'positional_default',
@@ -33,7 +33,7 @@ class ArgsProxy():
                  kwonly: list=None,
                  kwonly_default: dict=None,
                  varkwargs: str=''):
-        '''
+        """
         @param positional_only: list of positional only args
         @type positional_only: list
         @param positional_default: mapping of names to default values
@@ -48,7 +48,7 @@ class ArgsProxy():
         @type varkwargs: str
         @return: None
         @rtype:None
-        '''
+        """
 
         self.positional_only = positional_only or []
         self.positional_default = positional_default or {}
@@ -77,14 +77,14 @@ class ArgsProxy():
         return args
 
     def parse_args(self, args):
-        '''
+        """
         @param args: variant containing args
         @type args: variant
         @return: None
         @rtype: None
 
         Parse unknown type to build args from string/list/etc.
-        '''
+        """
 
         # Check things one by one, return as soon as match
         # is found.
@@ -120,7 +120,7 @@ class ArgsProxy():
             self.positional_default[kw] = val
 
     def parse_from_string(self, args: str):
-        '''
+        """
         @param args: String containing arg or args(?)
         @type args: string
         @return: None
@@ -137,7 +137,7 @@ class ArgsProxy():
         It should probably be completely redone, but the
         ugly code was already part of an unneeded
         premature optimization for convenience.
-        '''
+        """
 
         if ',' in args and '=' not in args:
             self.positional_only.extend(args.split(','))
@@ -228,9 +228,9 @@ class ArgsProxy():
 
 
 class ProxyBase():
-    ''' Eventually it makes more sense to have function, method, class
+    """ Eventually it makes more sense to have function, method, class
     be sublcasses of proxy base, since there's a lot of overlap
-    '''
+    """
 
     __slots__ = [
                 'name',
@@ -247,7 +247,7 @@ class ProxyBase():
                  decorators: list=None,
                  ide_comments: list=None):
 
-        '''
+        """
         @param name: Name of the proxy
         @type name: string
         @param args: Args() instance of args function should accept
@@ -258,7 +258,7 @@ class ProxyBase():
         @type decorators: list of decorators
         @param ide_comments: comments eg pynoinspection
         @type ide_comments: list
-        '''
+        """
 
         self.name = name
 
@@ -277,9 +277,9 @@ class ProxyBase():
 
 
 class FunctionProxy(ProxyBase):
-    ''' Proxy object to more intuitively assign
+    """ Proxy object to more intuitively assign
     attributes for interpretation by ClassWriter
-    '''
+    """
 
     __slots__ = [
         'body',
@@ -293,7 +293,7 @@ class FunctionProxy(ProxyBase):
                  ret: str=None,
                  **kwargs):
 
-        '''
+        """
         @param name: Name of the function
         @type name: string
         @param args: Args() instance of args function should accept
@@ -308,7 +308,7 @@ class FunctionProxy(ProxyBase):
         @type decorators: list of decorators
         @param IDEcomments: comments eg pynoinspection
         @type IDEcomments: list
-        '''
+        """
         kwargs['name'] = name
         super().__init__(**kwargs)
 
@@ -336,8 +336,8 @@ class MethodProxy(FunctionProxy):
 
 
 class ClassProxy(ProxyBase):
-    ''' Proxy for class definition.
-    '''
+    """ Proxy for class definition.
+    """
 
     __slots__ = [
                 'bases',
@@ -353,7 +353,7 @@ class ClassProxy(ProxyBase):
                  classvars: list=None,
                  methods: dict=None,
                  **kwargs):
-        '''
+        """
 
         @param name: class name
         @type name: string
@@ -367,7 +367,7 @@ class ClassProxy(ProxyBase):
         @param methods: dict of name:FunctionProxy
         @type methods: dict
 
-        '''
+        """
 
         # noinspection PyNoneFunctionAssignment
         args = kwargs.pop('args', None)
@@ -415,10 +415,10 @@ class ClassProxy(ProxyBase):
         ))
 
     def addMethod(self, method: FunctionProxy):
-        '''
+        """
         @param method: method to add
         @type method: FunctionProxy
         @return: None
         @rtype: None
-        '''
+        """
         self.methods[method.name] = method

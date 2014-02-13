@@ -11,10 +11,10 @@ mfp_doc = "C:\\Users\\Administrator\\Documents\\Programming\\docs\\output\\mfp_t
 
 
 class weblogin():
-    '''class for web logins
+    """class for web logins
     import modules in case they haven't been already,
     so that namespace isn't cluttered unless necessary
-    '''
+    """
     global urllib
     global request 
     global cookielib

@@ -8,7 +8,7 @@ Convenience functions to safely serialize an object
 and write to file without accidentally truncating the file
 if an error is thrown during the serialization process.
 
-Write to temp file (StringIO instance) to throw any errors
+Write to temp file (StringIO/BytesIO instance) to throw any errors
 during process. Once temp file is written, open file and
 write the temp file contents.
 """
