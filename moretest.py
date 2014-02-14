@@ -14,17 +14,16 @@ print(a)
 
 total = sum(a)
 days = len(a)
-print
 ave = total/days
 
-for weight_end in range(172, 175):
-    weight_start = 185
+for weight_end in range(175, 178):
+    for weight_start in range(171, 174):
 
-    weight_diff = weight_end-weight_start
-    
-    total_surplus = weight_diff * 3500
-    
-    print(weight_end, ave-total_surplus/days)
+        weight_diff = weight_end-weight_start
+
+        total_surplus = weight_diff * 3500
+
+        print(weight_end, ave-total_surplus/days)
     
 
 
