@@ -6,7 +6,7 @@ import bs4 as soup
 import calendar
 import datetime
 
-mfp_doc = "C:\\Users\\Administrator\\Documents\\Programming\\mfp_test.txt"
+mfp_doc = "C:\\Users\\Administrator\\Documents\\Programming\\docs\\output\\mfp_test2.txt"
 # 
 
 
