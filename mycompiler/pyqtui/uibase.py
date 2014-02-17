@@ -7,9 +7,7 @@ Created in: PyCharm Community Edition
 
 """
 __author__ = 'Nathan Starkweather'
-
-from snippets.metas import EmptyMethodMeta, OverloadWarning
-
+from pysrc.snippets.metas import EmptyMethodMeta, OverloadWarning
 
 class DebugControllerMeta(type):
     """ Do debugging things

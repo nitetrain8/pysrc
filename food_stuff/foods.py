@@ -122,7 +122,10 @@ def load_database() -> dict:
 
 
 def save_database(new: dict) -> None:
-    saved = load_database()
+    try:
+        saved = load_database()
+    except:
+        saved = {}
     saved.update(new)
 
     from io import StringIO
@@ -147,10 +150,17 @@ def foods_from_dict(mapping: dict)-> dict:
     foods = {k: v for k, v in mapping.items() if isinstance(v, Food)}
     return foods
 
-Foods = load_database()
+
+def json_to_pickle():
+    foods = load_database()
+    from pysrc.snippets import safe_pickle
+    pickle_path = '/'.join((__current_path, 'foods.pickle'))
+    safe_pickle(foods, pickle_path)
+
+# Foods = load_database()
 
 if __name__ == '__main__':
-
+    json_to_pickle()
     save_database({})
 
 

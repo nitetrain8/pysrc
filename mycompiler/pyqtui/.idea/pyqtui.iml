@@ -4,8 +4,7 @@
     <content url="file://$MODULE_DIR$" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="pysrc" />
-    <orderEntry type="module" module-name="scripts" />
+    <orderEntry type="module" module-name="source" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="" />

@@ -1,5 +1,13 @@
+"""
 
-from weakref import ref as wref, WeakValueDictionary
+Created by: Nathan Starkweather
+Created on: 02/15/2014
+Created in: PyCharm Community Edition
+
+
+"""
+
+from weakref import ref as wref
 
 class Link():
     count = 0
@@ -61,3 +69,4 @@ a = make_list2()
 input("2")
 b = make_list3()
 input("3")
+

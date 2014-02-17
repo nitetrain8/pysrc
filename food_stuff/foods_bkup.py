@@ -10,7 +10,7 @@ Created in: PyCharm Community Edition
 
 
 # noinspection PyUnresolvedReferences
-from foods import Food, foods_from_dict
+from foods import Food, foods_from_dict, save_database
 
 
 def make_foods():
@@ -52,3 +52,36 @@ def make_foods():
                       0)
     foods = foods_from_dict(locals())
     return foods
+
+if __name__ == '__main__':
+    foods = make_foods()
+    from os.path import dirname
+    here = dirname(__file__)
+    save = '/'.join((here, 'food.txt'))
+
+    attrs = {}
+    attr_list = ["name", "protein", "carbs", "fat", "alcohol", "serving_size", "serving_cal"]
+    for name, food in foods.items():
+        food_attrs = [str(food.__dict__[attr]) for attr in attr_list]
+
+        attrs[name] = food_attrs
+
+    for food in attrs:
+        print(food, attrs[food])
+
+    from io import StringIO
+    tmp = StringIO()
+
+    tmp.write("Name,")
+    tmp.writelines(','.join(attr_list))
+    tmp.write('\n')
+
+    for food in attrs:
+        food_line = ','.join((attrs[food]))
+        tmp.writelines((food_line, '\n'))
+
+    txt = tmp.getvalue()
+    with open(save, 'w') as f:
+        f.write(txt)
+    from os import startfile
+    startfile(save)

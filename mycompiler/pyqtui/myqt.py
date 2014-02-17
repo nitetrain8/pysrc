@@ -21,11 +21,17 @@ class StringListModel(QStringListModel):
     def __init__(self, *args):
         super().__init__(*args)
 
-    def appendString(self, qstr: str) -> None:
+    def appendString(self, qstr):
+        """
+        @param qstr: str to append
+        @type qstr: str
+        @return: None
+        @rtype: None
+        """
         row = self.rowCount()
         self.insertRows(row, 1)
-        index = self.index(row)
-        self.setData(index, qstr)
+        end = self.index(row)
+        self.setData(end, qstr)
 
     def removeString(self, qstr: str) -> None:
         row = self.stringList().index(qstr)
