@@ -4,12 +4,13 @@ Created by: Nathan Starkweather
 Created on: 02/16/2014
 Created in: PyCharm Community Edition
 
-
+All database-related things for food.
 """
 from collections import OrderedDict
-
 from os.path import dirname, exists
 import re
+
+from pysrc.food_stuff.food import Food
 
 
 __curdir = dirname(__file__)
@@ -27,34 +28,61 @@ __base_food_fields = [
                       ("ServingCal", float)
                       ]
 
+food_fields = __base_food_fields.copy()
 
-class Food():
-    pass
+__name_type_map = {
+                   "str" : str,
+                   "float" : float,
+                   "int" : int
+                   }
 
 
-class FoodNutrition():
-    pass
+def db_write_header(file_obj, base_fields=__base_food_fields):
+    """
+    @param file_obj: file object supporting 'write' interface
+    @type file_obj: _io._TextIOBase
+    @param base_fields: fields to write
+    @type base_fields: list[(str, type)]
+    @return: None
+    @rtype: None
+    """
+    fields, types = list(zip(*((name, cls.__name__) for name, cls in base_fields)))  # row <=> column order
+    file_obj.write(','.join(types))
+    file_obj.write('\n')
+    file_obj.write(','.join(fields))
+    file_obj.write('\n')
 
 
-def new_foods_csv(csvfile=None, base_fields=__base_food_fields):
+def db_init_foods(csvfile=None, base_fields=__base_food_fields):
+    """
+    @param csvfile: file to create or modify
+    @type csvfile: str
+    @param base_fields: list of fields to write
+    @type base_fields: list[(str, type)]
+    @return:
+    @rtype:
+    """
     if not csvfile:
         csvfile = __curdir + '/data/foods2.csv'
-    fields, types = list(zip(*((name, cls.__name__) for name, cls in base_fields)))
     with open(csvfile, 'w') as f:
-        f.write(','.join(types))
-        f.write('\n')
-        f.write(','.join(fields))
-        f.write('\n')
+        db_write_header(f, base_fields)
     return csvfile
 
 
-def get_foods_csv(fpath=__curdir + '/data', make_new=False):
+def get_foods_csv(fpath=None, make_new=False):
     """
     @param make_new: force re-creation of foods file if it already exists
     @type make_new: bool
     @return: str
     @rtype: str
+
+    Get the csv file. If it doesn't currently exist,
+    create it.
     """
+
+    if fpath is None:
+        fpath = __curdir + '/data'
+
     if not fpath.endswith('.csv'):
         csvfile = '/'.join((fpath, 'foods.csv'))
     else:
@@ -63,7 +91,7 @@ def get_foods_csv(fpath=__curdir + '/data', make_new=False):
     if exists(csvfile) and not make_new:
         pass
     else:
-        csvfile = new_foods_csv(csvfile)
+        csvfile = db_init_foods(csvfile)
     return csvfile
 
 
@@ -83,7 +111,9 @@ def assert_pynames(foods, magic_re=__assert_pyname_re, re_match=re.match):
     pyname is present.
 
     """
+    food_len = len(foods[0])
     for food in foods:
+        assert len(food) == food_len, "Mal-formed data file"
         food[-1] = food[-1].rstrip('\n')
         pyname = food[1]
         if not pyname or re_match(magic_re, pyname).group(1) != pyname:
@@ -98,6 +128,14 @@ def build_field_map(fnames, ftypes):
     @type ftypes: list[str]
     @return: dict mapping field names to their type
     @rtype: collections.OrderedDict[str, type]
+
+    When the db file is imported, the first row contains a list
+    of types corresponding to the python type of the contents
+    of that column.
+
+    This function parses that header, and builts a mapping of
+    names to classes to use to initialize fields to their proper type.
+    eg "str" -> str, call str(foo)
     """
 
     type_map = __name_type_map
@@ -115,10 +153,8 @@ def extract_raw_foods(fpath=None):
     @return: list
     @rtype: (collections.OrderedDict[str, type], list[list[str]]
     """
-    if fpath:
-        csvfile = get_foods_csv(fpath)
-    else:
-        csvfile = get_foods_csv()
+
+    csvfile = get_foods_csv(fpath)
 
     with open(csvfile, 'r') as f:
         ftypes = f.readline().split(",")
@@ -131,6 +167,8 @@ def extract_raw_foods(fpath=None):
     assert_pynames(attr_vals)
     field_map = build_field_map(fnames, ftypes)
 
+    assert len(field_map) == len(attr_vals[0]), "Mal-formed data file"
+
     return field_map, attr_vals
 
 
@@ -141,9 +179,9 @@ def build_food_objects(field_map, foods_list):
     @param foods_list: list of foods. each food is a list of attributes in order.
     @type foods_list: list[list[str]]
     @return: dict[str, Food]
-    @rtype: dict[str, Food]
+    @rtype: dict[str, pysrc.food_stuff.food.Food]
     """
-    objs = {}
+    objs = OrderedDict()
     for food in foods_list:
         new = Food()
         for attr, val in zip(field_map, food):
@@ -154,9 +192,7 @@ def build_food_objects(field_map, foods_list):
                 setattr(new, attr, ftype())
         objs[new.PyName] = new
 
-    for obj in objs:
-        print(objs[obj])
-        pass
+    assert len(foods_list) == len(objs), "Warning! Overlapping PyNames!"
 
     return objs
 
@@ -167,12 +203,40 @@ def name_to_pyname_repl(matchobj):
     @type matchobj: re.__Match
     @return: str
     @rtype: str
+
+    Helper function for name_to_pyname
+    act as repl parameter for re.sub()
     """
     match = matchobj.group(0)
     if match == "%":
         return "pc"
     else:
         return ''
+
+
+def save_db(foods, file=None, fields=__base_food_fields):
+    """
+
+    @param foods: list of foods
+    @type foods: dict[str, pysrc.food_stuff.food.Food]
+    @type fields: list[(str, type)]
+    @return: None
+    @rtype: None
+    """
+
+    if file is None:
+        file = get_foods_csv()
+
+    food_list = []
+    for food in foods.values():
+        food_ctxt = [str(getattr(food, attr, '')) for attr, _ in fields]
+        food_list.append(food_ctxt)
+
+    with open(file, 'w') as f:
+        db_write_header(f, fields)
+        for food in food_list:
+            f.write(','.join(food))
+            f.write('\n')
 
 
 def name_to_pyname(name, ptrn=r"([^a-zA-Z_0-9]+)", repl=name_to_pyname_repl, sub=re.sub):
@@ -186,13 +250,53 @@ def name_to_pyname(name, ptrn=r"([^a-zA-Z_0-9]+)", repl=name_to_pyname_repl, sub
     return pyname
 
 
-def __is_type(obj):
-    return isinstance(obj, type)
-__name_type_map = {}
-__name_type_map.update({k : v for k, v in globals().items() if __is_type(v)})
-__name_type_map.update({k : v for k, v in globals()['__builtins__'].__dict__.items() if __is_type(v)})
+def _inject_foods(foods, mapping):
+    """
+    @param foods: foods to inject
+    @type foods: collections.Mapping[str, Food]
+    @param mapping: objet to inject into
+    @type mapping: collections.MutableMapping
+    @return: None
+    @rtype: None
+    """
+    mapping.update(foods)
+
+
+def inject_main():
+    import sys
+    sys.modules['__main__'].__dict__.update(Foods)
+
+
+def extract_db_foods(fpath=None):
+    """
+    @return: Extract all of the foods from the database
+    @rtype:
+    """
+    fmap, foods = extract_raw_foods(fpath)
+    foods = build_food_objects(fmap, foods)
+    return foods
+
+Foods = extract_db_foods()
+
+
+def __save_bkup_cache():
+    """
+    @return: None
+    @rtype: None
+
+    just in case user(me) is dumb,
+    have a backup pickle cache that always
+    saves the last foods dict.
+    """
+    from pysrc.snippets import safe_pickle
+    pickle_bkup = __curdir + "/data/bkup_cache.pickle"
+    safe_pickle(Foods, pickle_bkup)
+
+from atexit import register
+register(__save_bkup_cache)
 
 
 if __name__ == '__main__':
-    fmap, foods = extract_raw_foods()
-    build_food_objects(fmap, foods)
+    dbg = "C:\\Users\\Administrator\\Documents\\Programming\\python\\pysrc\\food_stuff\\data\\foods2.csv"
+    foods = extract_db_foods(dbg)
+    save_db(foods)
