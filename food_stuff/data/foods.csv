@@ -1,8 +1,8 @@
-str,str,float,float,float,float,float,float
-Name,PyName,Protein,Carbs,Fat,Alcohol,ServingSize,ServingCal
-Heavy Cream,,0,0.5,6,0,15,50
-Dark Brown Sugar,,0,4,0,0,4,15
-Large Egg,,6.29,0.39,4.97,0,54,73.5
-IForce Protean Vanilla Cupcake Batter,,20,6.5,4,0,34,120
-Milk 1%,,10,16,2.5,0,240,130
-Greek Yogurt,,22,0,7,0,227,120
+str,str,float,float,float,float,float
+PyName,Name,Protein,Carbs,Alcohol,ServingSize,ServingCal
+HeavyCream,HeavyCream,0.0,0.5,0.0,15.0,50.0
+DarkBrownSugar,DarkBrownSugar,0.0,4.0,0.0,4.0,15.0
+LargeEgg,LargeEgg,6.29,0.39,0.0,54.0,73.5
+IForceProteanVanillaCupcakeBatter,IForceProteanVanillaCupcakeBatter,20.0,6.5,0.0,34.0,120.0
+Milk1pc,Milk1pc,10.0,16.0,0.0,240.0,130.0
+GreekYogurt,GreekYogurt,22.0,0.0,0.0,227.0,120.0
