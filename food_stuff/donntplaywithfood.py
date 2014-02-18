@@ -189,8 +189,8 @@ def name_to_pyname(name, ptrn=r"([^a-zA-Z_0-9]+)", repl=name_to_pyname_repl, sub
 def __is_type(obj):
     return isinstance(obj, type)
 __name_type_map = {}
-__name_type_map.update(globals())
-__name_type_map.update(globals()['__builtins__'].__dict__)
+__name_type_map.update({k : v for k, v in globals().items() if __is_type(v)})
+__name_type_map.update({k : v for k, v in globals()['__builtins__'].__dict__.items() if __is_type(v)})
 
 
 if __name__ == '__main__':
