@@ -1,0 +1,7 @@
+Name,name,protein,carbs,fat,alcohol,serving_size,serving_cal
+Heavy Cream,0,0.5,5,0,15,50
+Dark Brown Sugar,0,4,0,0,4,15
+Large Egg,6.29,0.39,4.97,0,54,73.5
+IForce Protean Vanilla Cupcake Batter,20,6.5,4.0,0,34,120
+Milk 1%,10,16,2.5,0,240,130
+Greek Yogurt,22,0,7,0,227,120
