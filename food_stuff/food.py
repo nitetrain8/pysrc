@@ -22,6 +22,16 @@ FoodMeta = type
 
 class Food(metaclass=FoodMeta):
     """
+
+    Food instance is intended primarily to be a
+    data container for a single food. All attributes are
+    public, and few methods are available.
+
+    The constructor allows setting abitrary attributes,
+    though one could just as easily assign them directly
+    to the instance object.
+
+    Ivars:
     @type PyName: str
     @type Name: str
     @type Protein: float
@@ -29,6 +39,8 @@ class Food(metaclass=FoodMeta):
     @type Alcohol: float
     @type ServingSize: float
     @type ServingCal: float
+
+    Cvars:
     @type cal_per_g_protein: float
     @type cal_per_g_fat: float
     @type cal_per_g_carb: float

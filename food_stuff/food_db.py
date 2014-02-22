@@ -37,6 +37,10 @@ __name_type_map = {
                    }
 
 
+# mapping of filenames <=> foods
+__foods_db_map = {}
+
+
 def db_write_header(file_obj, base_fields=__base_food_fields):
     """
     @param file_obj: file object supporting 'write' interface
@@ -174,22 +178,22 @@ def extract_raw_foods(fpath=None):
 
 def build_food_objects(field_map, foods_list):
     """
-    @param field_map: ordered mapping of field names to types
+    @param field_map: ordered mapping of field names for the Food instance to types.
     @type field_map: collections.OrderedDict[str, type]
     @param foods_list: list of foods. each food is a list of attributes in order.
     @type foods_list: list[list[str]]
     @return: dict[str, Food]
-    @rtype: dict[str, pysrc.food_stuff.food.Food]
+    @rtype: collections.OrderedDict[str, pysrc.food_stuff.food.Food]
     """
     objs = OrderedDict()
     for food in foods_list:
         new = Food()
         for attr, val in zip(field_map, food):
-            ftype = field_map[attr]
+            field_type = field_map[attr]
             if val:
-                setattr(new, attr, ftype(val))
+                setattr(new, attr, field_type(val))
             else:
-                setattr(new, attr, ftype())
+                setattr(new, attr, field_type())
         objs[new.PyName] = new
 
     assert len(foods_list) == len(objs), "Warning! Overlapping PyNames!"
@@ -263,6 +267,12 @@ def _inject_foods(foods, mapping):
 
 
 def inject_main():
+    """
+    Hack do not use!
+
+    @return:
+    @rtype:
+    """
     import sys
     sys.modules['__main__'].__dict__.update(Foods)
 
@@ -270,10 +280,14 @@ def inject_main():
 def extract_db_foods(fpath=None):
     """
     @return: Extract all of the foods from the database
-    @rtype:
+    @rtype: collections.OrderedDict[str, Food]
     """
-    fmap, foods = extract_raw_foods(fpath)
+    db_file = get_foods_csv(fpath)
+    fmap, foods = extract_raw_foods(db_file)
     foods = build_food_objects(fmap, foods)
+
+    __foods_db_map[fpath] = foods.copy()
+
     return foods
 
 Foods = extract_db_foods()
@@ -290,7 +304,7 @@ def __save_bkup_cache():
     """
     from pysrc.snippets import safe_pickle
     pickle_bkup = __curdir + "/data/bkup_cache.pickle"
-    safe_pickle(Foods, pickle_bkup)
+    safe_pickle(__foods_db_map, pickle_bkup)
 
 from atexit import register
 register(__save_bkup_cache)
