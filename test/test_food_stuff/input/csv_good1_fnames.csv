@@ -1,2 +1,1 @@
 PyName,Name,Protein,Carbs,Alcohol,ServingSize,ServingCal
-str,str,float,float,float,float,float

@@ -9,6 +9,7 @@ All database-related things for food.
 from collections import OrderedDict
 from os.path import dirname, exists
 import re
+from os import makedirs
 
 from pysrc.food_stuff.food import Food
 
@@ -30,13 +31,6 @@ __base_food_fields = [
 
 food_fields = __base_food_fields.copy()
 
-__name_type_map = {
-                   "str" : str,
-                   "float" : float,
-                   "int" : int
-                   }
-
-
 # mapping of filenames <=> foods
 __foods_db_map = {}
 
@@ -51,9 +45,9 @@ def db_write_header(file_obj, base_fields=__base_food_fields):
     @rtype: None
     """
     fields, types = list(zip(*((name, cls.__name__) for name, cls in base_fields)))  # row <=> column order
-    file_obj.write(','.join(types))
-    file_obj.write('\n')
     file_obj.write(','.join(fields))
+    file_obj.write('\n')
+    file_obj.write(','.join(types))
     file_obj.write('\n')
 
 
@@ -67,7 +61,11 @@ def db_init_foods(csvfile=None, base_fields=__base_food_fields):
     @rtype:
     """
     if not csvfile:
-        csvfile = __curdir + '/data/foods2.csv'
+        csvfile = __curdir + '/data/foods.csv'
+
+    file_dir = dirname(csvfile)
+    if not exists(file_dir):
+        makedirs(file_dir)
     with open(csvfile, 'w') as f:
         db_write_header(f, base_fields)
     return csvfile
@@ -102,25 +100,24 @@ def get_foods_csv(fpath=None, make_new=False):
 __assert_pyname_re = r"([a-zA-Z_][a-zA-Z0-9_]*)"
 
 
-def assert_pynames(foods, magic_re=__assert_pyname_re, re_match=re.match):
+def assert_pynames(foods, valid_id=__assert_pyname_re, re_match=re.match):
     """
     @param foods: list of foods
     @type foods: list[list[str]]
     @return: None
     @rtype: None
 
-    Perform the double-duty of stripping off newlines
-    from the last item in the foods list (side-effect of
-    TextIoWrapper.readlines()), and ensuring that a valid
-    pyname is present.
+    Ensure that a valid pyname is present.
 
+    Modifies list in place.
     """
     food_len = len(foods[0])
     for food in foods:
         assert len(food) == food_len, "Mal-formed data file"
-        food[-1] = food[-1].rstrip('\n')
         pyname = food[1]
-        if not pyname or re_match(magic_re, pyname).group(1) != pyname:
+
+        # if pyname is not a valid python identifier, obliterate it.
+        if not pyname or re_match(valid_id, pyname).group(1) != pyname:
             food[1] = name_to_pyname(food[0])
 
 
@@ -142,12 +139,36 @@ def build_field_map(fnames, ftypes):
     eg "str" -> str, call str(foo)
     """
 
-    type_map = __name_type_map
+    type_map = {
+        "str": str,
+        "float": float,
+        "int": int
+    }
     field_map = OrderedDict()
     for name, typename in zip(fnames, ftypes):
         cls = type_map[typename]
         field_map[name] = cls
     return field_map
+
+
+def load_raw_csv(csvfile):
+    """
+    @param csvfile: file to open
+    @type csvfile: str
+    @return: tuple of attr values, field names, and field types
+    @rtype: (list[list[str]], list[str], list[str])
+    """
+    with open(csvfile, 'r') as f:
+        fnames = f.readline().split(",")
+        ftypes = f.readline().split(",")
+        attr_vals = [line.split(',') for line in f]
+    ftypes[-1] = ftypes[-1].rstrip('\n')
+    fnames[-1] = fnames[-1].rstrip('\n')
+
+    for line in attr_vals:
+        line[-1] = line[-1].rstrip('\n')
+
+    return attr_vals, fnames, ftypes
 
 
 def extract_raw_foods(fpath=None):
@@ -160,13 +181,7 @@ def extract_raw_foods(fpath=None):
 
     csvfile = get_foods_csv(fpath)
 
-    with open(csvfile, 'r') as f:
-        ftypes = f.readline().split(",")
-        fnames = f.readline().split(",")
-        attr_vals = [line.split(',') for line in f]
-
-    ftypes[-1] = ftypes[-1].rstrip('\n')
-    fnames[-1] = fnames[-1].rstrip('\n')
+    attr_vals, fnames, ftypes = load_raw_csv(csvfile)
 
     assert_pynames(attr_vals)
     field_map = build_field_map(fnames, ftypes)
@@ -212,7 +227,7 @@ def name_to_pyname_repl(matchobj):
     act as repl parameter for re.sub()
     """
     match = matchobj.group(0)
-    if match == "%":
+    if "%" in match:
         return "pc"
     else:
         return ''
@@ -243,7 +258,7 @@ def save_db(foods, file=None, fields=__base_food_fields):
             f.write('\n')
 
 
-def name_to_pyname(name, ptrn=r"([^a-zA-Z_0-9]+)", repl=name_to_pyname_repl, sub=re.sub):
+def name_to_pyname(name, ptrn=r"(^[^a-zA-Z_]+|[^a-zA-Z_0-9]*)", repl=name_to_pyname_repl, sub=re.sub):
     """
     @param name: invalid identifier
     @type name: str
@@ -274,7 +289,9 @@ def inject_main():
     @rtype:
     """
     import sys
-    sys.modules['__main__'].__dict__.update(Foods)
+    if __foods_db_map:
+        for Foods in __foods_db_map.values():
+            sys.modules['__main__'].__dict__.update(Foods)
 
 
 def extract_db_foods(fpath=None):
@@ -290,7 +307,7 @@ def extract_db_foods(fpath=None):
 
     return foods
 
-Foods = extract_db_foods()
+# Foods = extract_db_foods()
 
 
 def __save_bkup_cache():

@@ -6,21 +6,9 @@ Created in: PyCharm Community Edition
 
 
 """
-from weakref import WeakSet
 
 
-class _FoodMeta(type):
-    all_foods = WeakSet()
-
-    def __call__(cls, *args):
-        self = super().__call__(*args)
-        type(cls).all_foods.add(self)
-        return self
-
-FoodMeta = type
-
-
-class Food(metaclass=FoodMeta):
+class Food():
     """
 
     Food instance is intended primarily to be a
@@ -52,13 +40,13 @@ class Food(metaclass=FoodMeta):
     cal_per_g_alcohol = 2.31 / 0.40  # based on 40% w/v Vodka 231cal per 100g
 
     def __init__(self,
-                 PyName=None,
-                 Name=None,
-                 Protein=None,
-                 Carbs=None,
-                 Alcohol=None,
-                 ServingSize=None,
-                 ServingCal=None,
+                 PyName='',
+                 Name='',
+                 Protein=0,
+                 Carbs=0,
+                 Alcohol=0,
+                 ServingSize=1,
+                 ServingCal=1,
                  **kwargs):
 
         """
@@ -80,3 +68,16 @@ class Food(metaclass=FoodMeta):
 
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def CalculateMacroCalories(self):
+        """
+        Calculate the amount of calories according to the macro
+        nutrient content of the food.
+
+        @return: float
+        @rtype: float
+        """
+
+        protein_cal = self.cal_per_g_protein * self.Protein
+        carb_cal = self.cal_per_g_carb * self.Carbs
+        fat_cal = self.fat_per_g_fat * self.Fat

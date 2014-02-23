@@ -1,5 +1,5 @@
-str,str,float,float,float,float,float
 PyName,Name,Protein,Carbs,Alcohol,ServingSize,ServingCal
+str,str,float,float,float,float,float
 HeavyCream,HeavyCream,0.0,0.5,0.0,15.0,50.0
 DarkBrownSugar,DarkBrownSugar,0.0,4.0,0.0,4.0,15.0
 LargeEgg,LargeEgg,6.29,0.39,0.0,54.0,73.5
