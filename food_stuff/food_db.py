@@ -114,11 +114,12 @@ def assert_pynames(foods, valid_id=__assert_pyname_re, re_match=re.match):
     food_len = len(foods[0])
     for food in foods:
         assert len(food) == food_len, "Mal-formed data file"
-        pyname = food[1]
+        pyname = food[0]
 
         # if pyname is not a valid python identifier, obliterate it.
-        if not pyname or re_match(valid_id, pyname).group(1) != pyname:
-            food[1] = name_to_pyname(food[0])
+        match = re_match(valid_id, pyname)
+        if not pyname or not match or match.group(0) != pyname:
+            food[0] = name_to_pyname(food[1])
 
 
 def build_field_map(fnames, ftypes):
@@ -139,15 +140,24 @@ def build_field_map(fnames, ftypes):
     eg "str" -> str, call str(foo)
     """
 
-    type_map = {
-        "str": str,
-        "float": float,
-        "int": int
-    }
-    field_map = OrderedDict()
+    field_map = []
+    _globals = globals()
+    _builtins = _globals['__builtins__']
+
+    # Check globals and builtins dicts for type typename.
+    # This is basically the same as using eval, except
+    # a malicious user cannot insert arbitrary code to be
+    # executed.
+
     for name, typename in zip(fnames, ftypes):
-        cls = type_map[typename]
-        field_map[name] = cls
+        cls = _globals.get(typename, None)
+        if cls is None:
+            cls = _builtins.get(typename, None)
+        if cls is None:
+            raise KeyError("%r is not visible in the global scope." % cls)
+
+        field_map.append((name, cls))
+
     return field_map
 
 
@@ -203,8 +213,7 @@ def build_food_objects(field_map, foods_list):
     objs = OrderedDict()
     for food in foods_list:
         new = Food()
-        for attr, val in zip(field_map, food):
-            field_type = field_map[attr]
+        for (attr, field_type), val in zip(field_map, food):
             if val:
                 setattr(new, attr, field_type(val))
             else:

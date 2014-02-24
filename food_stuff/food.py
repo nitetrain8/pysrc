@@ -44,6 +44,7 @@ class Food():
                  Name='',
                  Protein=0,
                  Carbs=0,
+                 Fat=0,
                  Alcohol=0,
                  ServingSize=1,
                  ServingCal=1,
@@ -54,10 +55,12 @@ class Food():
         @type Name: str
         @type Protein: float
         @type Carbs: float
+        @type Fat: float
         @type Alcohol: float
         @type ServingSize: float
         @type ServingCal: float
         """
+        self.Fat = Fat
         self.ServingCal = ServingCal
         self.ServingSize = ServingSize
         self.Alcohol = Alcohol
@@ -80,4 +83,10 @@ class Food():
 
         protein_cal = self.cal_per_g_protein * self.Protein
         carb_cal = self.cal_per_g_carb * self.Carbs
-        fat_cal = self.fat_per_g_fat * self.Fat
+        fat_cal = self.cal_per_g_fat * self.Fat
+        alcohol_cal = self.cal_per_g_alcohol * self.Alcohol
+
+        return sum((protein_cal, carb_cal, fat_cal, alcohol_cal))
+
+    def __repr__(self):
+        return '\n'.join("%s = %r" % (k, v) for k, v in self.__dict__.items())

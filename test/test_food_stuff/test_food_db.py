@@ -2,14 +2,20 @@ __author__ = 'Administrator'
 
 # Stuff to test
 from pysrc.food_stuff.food_db import db_write_header, db_init_foods, get_foods_csv, load_raw_csv, assert_pynames, \
-    name_to_pyname_repl, name_to_pyname, __save_bkup_cache, build_field_map
+    name_to_pyname_repl, name_to_pyname, __save_bkup_cache, build_field_map, build_food_objects
+
+from pysrc.food_stuff.food import Food
 
 # reference to module for various reasons including __dict__ access
 from pysrc.food_stuff import food_db
 
+
 # Test input/output stuff
-from pysrc.test.test_food_stuff.output.extract_csv_output import csv_good1_fnames, csv_good1_ftypes, csv_good1_attrvals, \
-    csv_good1_attrvals_no_mod, csv_good1_attrvals_no_pynames, ftypes_bad_types, fnames_bad_types
+from pysrc.test.test_food_stuff.output.extract_csv_output import csv_good_fnames1, csv_good_ftypes1, csv_good_attrvals1, \
+    csv_good_attrvals_no_mod1, csv_good_attrvals_no_pynames1, ftypes_bad_types, fnames_bad_types, csv_bad_pynames1, \
+    test_food_objects_fmap, test_food_objects, \
+    test_food_objs_foods
+
 
 # Misc imports
 import unittest
@@ -274,15 +280,14 @@ class TestCSVExtract(unittest.TestCase):
         """
         self.good_input1 = input_dir + "\\extract_csv_good1.csv"
 
-        with open(self.good_input1, 'r') as f:
-            self.good_input1_txt = f.read()
+        self.good1_fnames = csv_good_fnames1
+        self.good1_ftypes = csv_good_ftypes1
+        self.good1_attrvals = csv_good_attrvals1
 
-        self.good1_fnames = csv_good1_fnames
-        self.good1_ftypes = csv_good1_ftypes
-        self.good1_attrvals = csv_good1_attrvals
+        self.good1_attrvals_no_mod = csv_good_attrvals_no_mod1
+        self.good1_attrvals_no_pynames = csv_good_attrvals_no_pynames1
 
-        self.good1_attrvals_no_mod = csv_good1_attrvals_no_mod
-        self.good1_attrvals_no_pynames = csv_good1_attrvals_no_pynames
+        self.attrvals_bad_pynames1 = csv_bad_pynames1
 
         self.name_to_pyname_csv = input_dir + "\\name_to_pyname.csv"
 
@@ -307,7 +312,7 @@ class TestCSVExtract(unittest.TestCase):
         for expected_vals, result_vals in zip(self.good1_attrvals, result_vals):
             self.assertEqual(expected_vals, result_vals)
 
-    def test_assert_pynames(self):
+    def test_assert_pynames_no_mod(self):
         """
         Test the assert pynames function.
         @return:
@@ -318,11 +323,8 @@ class TestCSVExtract(unittest.TestCase):
         test_no_mod = self.good1_attrvals_no_mod
 
         # Assert no modification
-        # do this the long way so error message is easier to read
-        # compare non-nested lists.
         foods_list = [food[:] for food in test_no_mod]
 
-        # No return value, list modified in place.
         testfunc(foods_list)
 
         for result_line, expected_line in zip(foods_list, test_no_mod):
@@ -335,6 +337,38 @@ class TestCSVExtract(unittest.TestCase):
         for i in range(len(foods_list) - 1):
             foods_list[i].pop()
             self.assertRaises(AssertionError, testfunc, foods_list)
+
+    def test_assert_pynames_full_list(self):
+        """
+        @return:
+        @rtype:
+        """
+
+        testfunc = assert_pynames
+        in_attrs = [line[:] for line in self.good1_attrvals_no_pynames]
+
+        expected = self.good1_attrvals
+
+        testfunc(in_attrs)
+        for expected_line, result_line in zip(expected, in_attrs):
+            self.assertEqual(expected_line, result_line)
+
+    def test_assert_pynames_override_bad(self):
+        """
+        Ensure that assert_pynames overrides bad pynames.
+        @return:
+        @rtype:
+        """
+
+        testfunc = assert_pynames
+        expected = self.good1_attrvals
+
+        result = [line[:] for line in self.attrvals_bad_pynames1]
+
+        testfunc(result)
+
+        for expected_line, result_line in zip(expected, result):
+            self.assertEqual(expected_line, result_line)
 
     # noinspection PyTypeChecker
     def test_name_to_pyname_repl(self):
@@ -389,8 +423,8 @@ class TestTypeMapping(unittest.TestCase):
         @rtype:
         """
 
-        self.ftypes_good1 = csv_good1_ftypes
-        self.fnames_good1 = csv_good1_fnames
+        self.ftypes_good1 = csv_good_ftypes1
+        self.fnames_good1 = csv_good_fnames1
 
         self.ftypes_bad1 = ftypes_bad_types
         self.fnames_bad1 = fnames_bad_types
@@ -411,19 +445,45 @@ class TestTypeMapping(unittest.TestCase):
         fnames = self.fnames_good1
         result = testfunc(fnames, ftypes)
 
-        for result_key, ftype, fname in zip(result, ftypes, fnames):
-            self.assertEqual(fname, result_key)
-            result_type = result[result_key]
+        for (result_typename, result_type), ftype, fname in zip(result, ftypes, fnames):
+            self.assertEqual(fname, result_typename)
             self.assertEqual(result_type.__name__, ftype)
 
-        ftypes = self.ftypes_bad1
-        fnames = self.fnames_bad1
 
-        for ftype, fname in zip(ftypes, fnames):
-            fname_arg = (fname,)
-            ftype_arg = (ftype,)
-            self.assertRaises(KeyError, testfunc, fname_arg, ftype_arg)
+class TestBuildFoods(unittest.TestCase):
+
+    def setUp(self):
+        """
+        @return:
+        @rtype:
+        """
+
+        self.foods_list = test_food_objs_foods
+        self.objs_fmap = test_food_objects_fmap
+        self.food_objs = test_food_objects
+
+    def test_build_food_objects(self):
+        """
+        @return:
+        @rtype:
+        """
+        testfunc = build_food_objects
+
+        # Assume that build_field_map works correctly
+        expected = self.food_objs
+        result = testfunc(self.objs_fmap, self.foods_list)
+
+        for exp_key, result_key in zip(expected, result):
+            self.assertEqual(exp_key, result_key)
+            exp_food, result_food = expected[exp_key], result[result_key]
+
+            # Test fails using assertEqual directly since food object
+            # does not currently (2/23/2014) support rich comparison.
+            for attr in vars(exp_food):
+                exp_attr = getattr(exp_food, attr)
+                result_attr = getattr(result_food, attr)
+                self.assertEqual(exp_attr, result_attr)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=9)
