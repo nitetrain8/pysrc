@@ -5,6 +5,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="source" />
+    <orderEntry type="module" module-name="recipemaker" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="" />
