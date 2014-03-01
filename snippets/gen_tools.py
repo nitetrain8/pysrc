@@ -47,7 +47,7 @@ def make_module_header(src_name=default_src_name, body=''):
     date = datetime.now().strftime("%m/%d/%Y")
 
     header = _header_template.format(date=date,
-                                     src_name=src_name,
+                                     src_name=src_name.replace('\\', '/'),
                                      msg_body=body)
     return header
 
