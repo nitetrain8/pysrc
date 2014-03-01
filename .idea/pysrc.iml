@@ -5,6 +5,9 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="pyqtui" />
+    <orderEntry type="module" module-name="officelib" />
+    <orderEntry type="module" module-name="pbslib" />
+    <orderEntry type="module" module-name="scripts" />
   </component>
 </module>
 
