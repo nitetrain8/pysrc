@@ -9,5 +9,11 @@
     <orderEntry type="module" module-name="pbslib" />
     <orderEntry type="module" module-name="scripts" />
   </component>
+  <component name="PackageRequirementsSettings">
+    <option name="requirementsPath" value="" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="myDocStringFormat" value="Epytext" />
+  </component>
 </module>
 

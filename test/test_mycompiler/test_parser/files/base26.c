@@ -68,8 +68,7 @@ char *cellstr(long row, long col){
 	for(i = 0; ++i < numdig;){
 		cellstring[i] = chr(64 + (int)cellnum[i]);
 	}
-	
-	
+
 	
 	return cellstring;
 }
