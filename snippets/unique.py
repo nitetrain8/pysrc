@@ -26,9 +26,9 @@ def unique_name(fpath):
 
     split_path = _splitext(fpath)
     i = 1
-    tmplt = "(%d)"
-    new = (tmplt % i).join(split_path)
+    tmplt = "(%d)".join(split_path)
+    new = tmplt % i
     while _exists(new):
         i += 1
-        new = (tmplt % i).join(split_path)
+        new = tmplt % i
     return new
