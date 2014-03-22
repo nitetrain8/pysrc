@@ -1,12 +1,21 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
 
-char *cellstr(long number);
+#include "foo.h"
+
+#define myfoo(a, b, e) bar (a); {\
+                            int b; \
+                            ++b;}
+
+
+#define BAXBUF 256
+
+#define badmacro(a, b) dofoo(b) hob pob
+
+char *cellstr(long number, long c);
 
 int main(int argc, char *argv[]) {
 
+    myfoo (argc, argc, argv);
+    badmacro(argc, &argv);
 	//get number from somewhere
 	int i;
 	for(i = 0; i < 1000; i++){
@@ -72,3 +81,5 @@ char *cellstr(long row, long col){
 	
 	return cellstring;
 }
+
+#include "dummy.h"

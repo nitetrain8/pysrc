@@ -6,17 +6,17 @@ Created in: PyCharm Community Edition
 
 
 """
-from re import compile as re_compile, MULTILINE
+from re import compile as re_compile
 import re
 
 identifier = r"[a-zA-Z_]\w*?"
 
 
-class ParseError(Exception):
+class PreprocessorError(SyntaxError):
     pass
 
 
-class InvalidSyntaxError(ParseError, SyntaxError):
+class InvalidDirective(PreprocessorError):
     """
     Invalid preprocessor syntax
     """
@@ -68,7 +68,7 @@ class Include(Directive):
 directive_re = re_compile(r"\s*#\s*(%s)\s+(.*)" % identifier)
 
 
-def filter_directives(stream, magic=directive_re):
+def filter_directives(stream, magic=directive_re.match):
     """
     @param stream: file-like object supporting iteration
     @type stream: typehint.FileObject
@@ -77,7 +77,7 @@ def filter_directives(stream, magic=directive_re):
     """
     s = iter(stream)
     for line in s:
-        match = magic.match(line)
+        match = magic(line)
         if match:
             d, *args = match.groups()
             # can't use takewhile generator here-
@@ -87,9 +87,9 @@ def filter_directives(stream, magic=directive_re):
             while args[-1].endswith('\\'):
                 try:
                     #: @type: str
-                    line = next(stream)
+                    line = next(stream, '')
                 except StopIteration:
-                    raise InvalidSyntaxError("Invalid trailing '\\' in token at end of file")
+                    raise InvalidDirective("Invalid trailing '\\' in token at end of file")
                 # print("--line--", repr(re.sub(r"(^\s+)(\S.*)(\s+\\$)", '', line)))
 
                 args.append(line)
@@ -136,3 +136,27 @@ if __name__ == '__main__':
 
     ptrn3 = r"^\s*#\s*({id}*?\n)".format(id=valid_id)
     ptrn4 = r"^\s*#\s*({id}*?)\s+({id}*?)\n".format(id=valid_id)
+
+    from subprocess import call
+    from os.path import dirname
+
+    cfile = "C:\\Users\\Administrator\\Documents\\Programming\\python\\pysrc\\test\\test_mycompiler\\test_parser\\files\\base26.c"
+    cdir = dirname(cfile)
+    # fooh = cdir + "\\foo.h"
+    #
+    # with open(fooh, 'w') as f:
+    #     f.write("#ifndef DUMMY_H\nfloat dummy;\n#endif \\\\DUMMY_H")
+    CC = "D:\\MinGW\\mingw64\\bin\\gcc.exe -E"
+    outfile = "C:\\foo.txt"
+    args = "{CC} {cfile} -o {outfile}".format(CC=CC, cfile=cfile, outfile=outfile)
+
+    with open("C:\\foo.txt", 'w') as f:
+        f.truncate()
+
+    call(args)
+
+    from os import startfile
+    try:
+        startfile(outfile)
+    except FileNotFoundError:
+        pass

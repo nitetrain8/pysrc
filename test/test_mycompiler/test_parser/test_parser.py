@@ -15,17 +15,24 @@ test_dir = dirname(dirname(curdir))
 temp_dir = join(test_dir, 'temp', 'test_parser')
 
 
+def setUpModule():
+    try:
+        mkdirs(temp_dir)
+    except FileExistsError:
+        pass
+
+
 class MyTestCase(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
         @return: None
         @rtype: None
         """
-        try:
-            mkdirs(temp_dir)
-        except FileExistsError:
-            pass
+
+        from os import listdir
+        cls.files = [join(input_dir, f) for f in listdir(input_dir)]
 
         pre_pends = "#", " #", "# ", "   #   "
         post_pends = "\n", " \n", " foo\n", "(bar)\n", "\n", " f\n", """ do { \\
@@ -42,10 +49,10 @@ class MyTestCase(unittest.TestCase):
                     line = (''.join((pre, kw, post)), kw, post)
                     test_lines.append(line)
 
-        self.test_lines = test_lines
-        self.pre_pends = pre_pends
-        self.post_pends = post_pends
-        self.base_kw = base_kw
+        cls.test_lines = test_lines
+        cls.pre_pends = pre_pends
+        cls.post_pends = post_pends
+        cls.base_kw = base_kw
 
     def test_parse_line_match(self):
         """
@@ -68,8 +75,6 @@ class MyTestCase(unittest.TestCase):
         """
         test_str = "#if defined (__vax__) || defined (__ns16000__)"
 
-        from re import compile as re_compile, DOTALL
-
         valid_dir = '(%s)' % '|'.join(Directive.VALID)
 
         id_or_arg = r"(\((.+)\)|(\|\||&&)|[a-zA-Z][a-zA-Z0-0_]*)"
@@ -81,8 +86,6 @@ class MyTestCase(unittest.TestCase):
 
 
         result = parse_line(test_str)
-
-
 
     def test_iterlines(self):
         """
@@ -118,16 +121,64 @@ class MyTestCase(unittest.TestCase):
             for r in gen:
                 print(repr(r))
 
+    def test_something2(self):
+        """
+        """
+        import re
 
-    def tearDown(self):
-        """
-        @return: None
-        @rtype: None
-        """
-        try:
-            rmtree(temp_dir)
-        except FileNotFoundError:
-            pass
+        magic = re.compile(rb"^\s*#.*?(\\)\r\n(?:.*?(\\)\r\n)*")
+
+        file = self.files[0]
+        print(file)
+        with open(file, 'rb') as f:
+            buf = f.read()
+
+        # print(buf)
+        # print(magic.match(buf))
+        # print(buf)
+        include_parser = re.compile(rb"(include)\s*(?:<|\")(.*)(?:>|\")", re.MULTILINE)
+        # include_parser = re.compile(rb'\s*(?:(\S*?)|\s+)')
+        include_match = include_parser.search(buf)
+        # while include_match:
+            #
+            # print(include_match.groups())
+            # include_match = include_parser.search(buf, pos=include_match.end())
+
+        # buf2 = buf.replace(b'\\\r\n', b'\r\n')
+        #
+        # foo2 = "C:\\foo2.txt"
+        # with open(foo2, 'wb') as f:
+        #     f.write(buf2)
+        #
+        # from os import startfile
+        # startfile(foo2)
+
+        obj = r"([a-zA-Z_][a-zA-Z_0-9]*?)\s+"
+        func = r"([a-zA-Z_][a-zA-Z_0-9]*?\(.*?\))\s+"
+        tok = r"(?:([^\s]*?)\r\n)"
+        word = r"([a-zA-Z0-9]+?)[,]"
+
+        print(re.compile(r"^(?:[a-zA-Z0-9]+,)*[a-zA-Z0-9]+$").match("herp,a,derp,foo,bar,baz").groups())
+        parse_define = re.compile((r"\s*#\s*(define)\s(?:%(obj_macro)s|%(func_macro)s)(?:%(token_seq)s)"
+                                   % {"obj_macro" : obj,
+                                      "func_macro" : func,
+                                      "token_seq" : tok}).encode('ascii'), re.MULTILINE | re.ASCII).search
+
+        define_match = parse_define(buf)
+        while define_match:
+            print(define_match.groups())
+            define_match = parse_define(buf, pos=define_match.end())
+
+
+def tearDownModule():
+    """
+    @return: None
+    @rtype: None
+    """
+    try:
+        rmtree(temp_dir)
+    except FileNotFoundError:
+        pass
 
 if __name__ == '__main__':
     unittest.main()
