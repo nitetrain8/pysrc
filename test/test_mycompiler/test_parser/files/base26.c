@@ -8,7 +8,11 @@
 
 #define BAXBUF 256
 
-#define badmacro(a, b) dofoo(b) hob pob
+#define badmacro(a, b) dofoo(b) \
+    do {\
+        foo.bar(baz);\
+        herp a hob pob \
+        } while(0)
 
 char *cellstr(long number, long c);
 

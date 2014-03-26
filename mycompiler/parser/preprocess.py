@@ -22,6 +22,7 @@ class InvalidDirective(PreprocessorError):
     """
     pass
 
+
 class Directive():
 
     VALID = {
@@ -48,6 +49,10 @@ class Directive():
         self.isValid = directive in self.VALID
         self.directive = directive
 
+    @classmethod
+    def regex(cls):
+        return "(%s)" % '|'.join(cls.VALID)
+
 
 class FlowCtrl(Directive):
 
@@ -66,37 +71,47 @@ class Include(Directive):
 
 
 directive_re = re_compile(r"\s*#\s*(%s)\s+(.*)" % identifier)
+cpp_filter = re_compile(r"^\s*#")
+arg_re = re_compile(r"\s*#\s*([a-zA-Z_]\w*)(?:\s+(.*))?$")
 
 
-def filter_directives(stream, magic=directive_re.match):
+def filter_directives(stream, is_cpp_line=cpp_filter.match, arg_parser=arg_re.match):
     """
     @param stream: file-like object supporting iteration
     @type stream: typehint.FileObject
     @return: yield complete lines corresponding to directives.
     @rtype: __generator[str]
     """
-    s = iter(stream)
-    for line in s:
-        match = magic(line)
-        if match:
-            d, *args = match.groups()
-            # can't use takewhile generator here-
-            # otherwise, a line would be skipped when
-            # takewhile calls a line and returns false, but
-            # doesn't rewind iterator by 1.
-            while args[-1].endswith('\\'):
-                try:
-                    #: @type: str
-                    line = next(stream, '')
-                except StopIteration:
-                    raise InvalidDirective("Invalid trailing '\\' in token at end of file")
-                # print("--line--", repr(re.sub(r"(^\s+)(\S.*)(\s+\\$)", '', line)))
 
-                args.append(line)
+    rstrip = str.rstrip
+    lines = map(rstrip, iter(stream))
+    line = ''
+    lineno = 0
+
+    def next_line(is_cpp_line=is_cpp_line, _next=next):
+        nonlocal line, lineno, lines
+        try:
+            while True:
+                line = _next(lines)
+                lineno += 1
+                if is_cpp_line(line):
+                    return True
+        except StopIteration:
+            return False
+
+    while next_line():
+            match = arg_parser(line)
+            if not match:  # empty '#' by itself
+                continue
+
+            d, *args = match.groups()
+            append = args.append
+            while args[-1].endswith('\\'):
+                #: @type: str
+                line = next(stream, '')
+                append(line[:-1])
             print(args)
             yield d, ' '.join(re.sub(r"(^\s*?)(\S.*?)(\s*\\\s*$)", '\\2', line) for line in args)
-
-
 
 
 def parse_line(line, directive_re=re_compile(r"^\s*#\s*([a-zA-Z_][a-zA-Z_0-9]*)\s*(\(.*\))?\s*(.*?)(\\)?\n", re.DOTALL)):
@@ -137,7 +152,7 @@ if __name__ == '__main__':
     ptrn3 = r"^\s*#\s*({id}*?\n)".format(id=valid_id)
     ptrn4 = r"^\s*#\s*({id}*?)\s+({id}*?)\n".format(id=valid_id)
 
-    from subprocess import call
+    from subprocess import call, check_output
     from os.path import dirname
 
     cfile = "C:\\Users\\Administrator\\Documents\\Programming\\python\\pysrc\\test\\test_mycompiler\\test_parser\\files\\base26.c"
@@ -153,10 +168,11 @@ if __name__ == '__main__':
     with open("C:\\foo.txt", 'w') as f:
         f.truncate()
 
-    call(args)
-
-    from os import startfile
-    try:
-        startfile(outfile)
-    except FileNotFoundError:
-        pass
+    result = check_output(args)
+    print(result)
+    if not result:
+        from os import startfile
+        try:
+            startfile(outfile)
+        except FileNotFoundError:
+            pass

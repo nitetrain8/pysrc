@@ -6,7 +6,7 @@ from os import makedirs as mkdirs
 from shutil import rmtree
 
 from pysrc.mycompiler.parser.preprocess import parse_line, parse_stream, Directive, \
-    FlowCtrl, Include, filter_directives
+    FlowCtrl, Include, filter_directives, arg_re, cpp_filter
 
 curdir, module = split(__file__)
 module, _ = splitext(module)
@@ -22,7 +22,7 @@ def setUpModule():
         pass
 
 
-class MyTestCase(unittest.TestCase):
+class ParserTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -33,6 +33,8 @@ class MyTestCase(unittest.TestCase):
 
         from os import listdir
         cls.files = [join(input_dir, f) for f in listdir(input_dir)]
+        cls.base26 = join(input_dir, 'base26.c')
+        cls.copytree = join(input_dir, 'copytree.c')
 
         pre_pends = "#", " #", "# ", "   #   "
         post_pends = "\n", " \n", " foo\n", "(bar)\n", "\n", " f\n", """ do { \\
@@ -73,19 +75,20 @@ class MyTestCase(unittest.TestCase):
         @return:
         @rtype:
         """
-        test_str = "#if defined (__vax__) || defined (__ns16000__)"
+        parser = arg_re.match
 
-        valid_dir = '(%s)' % '|'.join(Directive.VALID)
+        with open(self.base26, 'r') as f:
+            for line in filter(cpp_filter.match, f):
+                match = parser(line)
+                # if match:
+                #     print(match.groups())
 
-        id_or_arg = r"(\((.+)\)|(\|\||&&)|[a-zA-Z][a-zA-Z0-0_]*)"
+        with open(self.copytree, 'r') as f:
+            for line in filter(cpp_filter.match, f):
+                match = parser(line)
+                if match:
+                    print(match.groups())
 
-        arg = "defined (__vax__) || defined (__ns16000__)"
-        arg2 = "(__vax__) || defined (__ns16000__)"
-        arg3 = "defined || bar (__foobaz__)"
-        myre = r'\s*'.join(('', '#', valid_dir, id_or_arg))
-
-
-        result = parse_line(test_str)
 
     def test_iterlines(self):
         """
@@ -108,6 +111,7 @@ class MyTestCase(unittest.TestCase):
         multi_test = ("#define herpadperp do { \\", "\t\t\t foo.bar = baz; \\", "\t\t\t} while(0);")
 
         tests = (
+            # ("#", "  # "),
             ("#include <stdio.h>", ("include", " <stdio.h>")),
             ("#if defined (__vax__) \\\n|| defined (__ns16000__)", ("if", "defined (__vax__) || defined (__ns16000__)")),
             ('\n'.join(multi_test), ("herpaderp", ""))
@@ -158,16 +162,28 @@ class MyTestCase(unittest.TestCase):
         tok = r"(?:([^\s]*?)\r\n)"
         word = r"([a-zA-Z0-9]+?)[,]"
 
-        print(re.compile(r"^(?:[a-zA-Z0-9]+,)*[a-zA-Z0-9]+$").match("herp,a,derp,foo,bar,baz").groups())
+        print(re.compile(r",\s*").split(r"herp, a, derp, foo, bar, baz"))
         parse_define = re.compile((r"\s*#\s*(define)\s(?:%(obj_macro)s|%(func_macro)s)(?:%(token_seq)s)"
                                    % {"obj_macro" : obj,
                                       "func_macro" : func,
                                       "token_seq" : tok}).encode('ascii'), re.MULTILINE | re.ASCII).search
 
         define_match = parse_define(buf)
-        while define_match:
-            print(define_match.groups())
-            define_match = parse_define(buf, pos=define_match.end())
+        # while define_match:
+            # print(define_match.groups())
+            # define_match = parse_define(buf, pos=define_match.end())
+
+
+class DirectiveTest(unittest.TestCase):
+    def test_regex(self):
+        cls_list = (
+            Directive,
+            Include,
+            FlowCtrl
+        )
+
+        for cls in cls_list:
+            print(cls.regex())
 
 
 def tearDownModule():

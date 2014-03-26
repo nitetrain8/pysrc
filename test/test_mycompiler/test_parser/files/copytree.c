@@ -15,7 +15,8 @@ int copytree(const char * __restrict__ src, const char * __restrict__ dst){
 
 #ifdef DEBUGSPRINTF
 #define sprintf(buf, fmt, args...) do { sprintf(buf, fmt, args); \
-									printf("Func: %s\nLine: %d\nbuf: %s\n\n", __PRETTY_FUNCTION__, __LINE__, buf); \
+									    printf("Func: %s\nLine: %d\nbuf: %s\n\n", \
+									    __PRETTY_FUNCTION__, __LINE__, buf); \
 									} while(0)
 #endif //DEBUGSPRINTF
 
@@ -92,7 +93,7 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-#endif 
+#endif //CTDEBUG
 
 #ifdef CTDEBUG
 #undef CTDEBUG
