@@ -88,7 +88,18 @@ class Smooth(unittest.TestCase):
 
         self.do_smooth_test(x, y, expected)
 
+    def test_smooth1_2(self):
+        """ floats (decimals) """
+        one_hundred = D(100)
 
+        y_data = tuple(x / one_hundred for x in range(0, 101, 20))
+        x_data = tuple(range(0, len(y_data) * 2, 2))
+        expected = []
+        for intpart in range(0, 2):
+            for decpart in range(0, 10, 1):
+                expected.append(D("%d.%d" % (intpart, decpart)))
+
+        self.do_smooth_test(x_data, y_data, expected)
 
 
 def tearDownModule():
