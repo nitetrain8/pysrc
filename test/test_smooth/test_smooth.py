@@ -38,7 +38,7 @@ def setUpModule():
 
 class Smooth(unittest.TestCase):
 
-    def do_smooth_test(self, x, y, expected):
+    def do_smooth1_test(self, x, y, expected):
         """
         @return: None
         @rtype: None
@@ -74,19 +74,19 @@ class Smooth(unittest.TestCase):
         expected = list(range(100))
         expected[0] = 1
 
-        self.do_smooth_test(x, y, expected)
+        self.do_smooth1_test(x, y, expected)
 
         x = 0, 10
         y = 0, 10
         expected = tuple(range(100))
 
-        self.do_smooth_test(x, y, expected)
+        self.do_smooth1_test(x, y, expected)
 
         x = tuple(range(0, 51, 10))
         y = tuple(range(0, 51, 10))
         expected = tuple(range(51))
 
-        self.do_smooth_test(x, y, expected)
+        self.do_smooth1_test(x, y, expected)
 
     def test_smooth1_2(self):
         """ floats (decimals) """
@@ -99,7 +99,7 @@ class Smooth(unittest.TestCase):
             for decpart in range(0, 10, 1):
                 expected.append(D("%d.%d" % (intpart, decpart)))
 
-        self.do_smooth_test(x_data, y_data, expected)
+        self.do_smooth1_test(x_data, y_data, expected)
 
 
 def tearDownModule():
