@@ -13,4 +13,5 @@ from .printdir import printdir
 from .safe_write import safe_pickle, safe_json
 from .gen_tools import make_module_header
 from .unique import unique_name
+from .smooth import smooth1
 
