@@ -13,7 +13,7 @@ from os import makedirs
 from os.path import dirname, join
 from shutil import rmtree
 from pysrc.snippets.smooth import smooth1
-from decimal import Decimal as D
+from decimal import Decimal as D, getcontext, setcontext
 
 __author__ = 'Administrator'
 
@@ -30,15 +30,43 @@ def setUpModule():
     @return: None
     @rtype: None
     """
-    try:
-        makedirs(temp_dir)
-    except FileExistsError:
-        pass
+    for dir in (temp_dir, test_input):
+        try:
+            makedirs(dir)
+        except FileExistsError:
+            pass
 
 
 class Smooth(unittest.TestCase):
 
-    def do_smooth1_test(self, x, y, expected):
+    def __init__(self, methodName='runTest'):
+        super().__init__(methodName)
+        self.addTypeEqualityFunc(D, self.assertDecimalEqual)
+
+        from decimal import Context
+        self.ctx = Context(prec=12)
+
+    def assertDecimalEqual(self, exp, result, msg=None):
+        """
+        @param exp:
+        @type exp: D
+        @param result:
+        @type result:
+        @return:
+        @rtype:
+        """
+        old_ctx = getcontext()
+        setcontext(self.ctx)
+        exp = +exp
+        result = +result
+        cmp = exp.compare(result)
+        setcontext(old_ctx)
+        if cmp:
+            raise self.failureException((msg or '') + str(exp) + ' ' + str(result))
+
+
+
+    def do_smooth1_test(self, x, y, exp_ydata=None):
         """
         @return: None
         @rtype: None
@@ -50,8 +78,9 @@ class Smooth(unittest.TestCase):
         xd, yd = smooth1(x, y)
         assertEqual = self.assertEqual
 
-        for xpt, ypt, exp in zip(xd, yd, expected):
-            assertEqual(ypt, exp)
+        if exp_ydata:
+            for xpt, ypt, exp in zip(xd, yd, exp_ydata):
+                assertEqual(ypt, exp)
 
         for xpt, ypt in zip(x, y):
             assertEqual(yd[xpt], ypt)
@@ -100,6 +129,21 @@ class Smooth(unittest.TestCase):
                 expected.append(D("%d.%d" % (intpart, decpart)))
 
         self.do_smooth1_test(x_data, y_data, expected)
+
+    def test_smooth1_real1(self):
+        """
+        """
+        testfile = test_input + "\\real_smooth.csv"
+        with open(testfile, 'r') as f:
+            data = [x.split(',') for x in f.read().splitlines()]
+
+        x, y = zip(*data)
+
+        x = map(float, x)
+        self.do_smooth1_test(x, y)
+
+
+
 
 
 def tearDownModule():

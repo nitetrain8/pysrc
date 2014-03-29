@@ -15,7 +15,14 @@ def _fudge(i, x_prev, y_prev, ydiff_over_tdiff):
 
 
 def smooth1(xd, yd):
-
+    """
+    @param xd:
+    @type xd:
+    @param yd:
+    @type yd:
+    @return:
+    @rtype:
+    """
     decimal = D
 
     xd = tuple(map(round, xd))
@@ -29,16 +36,13 @@ def smooth1(xd, yd):
 
     data = zip(xd, yd)
     next(data)
-    fudge = _fudge
 
     for x_next, y_next in data:
 
-        i = x_prev
-        ydiff_over_tdiff = (y_next - y_prev) / decimal(x_next - x_prev)
+        ydiff_over_tdiff = (y_next - y_prev) / (x_next - x_prev)
 
-        while i < x_next:
-            i += 1
-            y_data[i] = fudge(i, x_prev, y_prev, ydiff_over_tdiff)
+        for i in range(x_prev + 1, x_next + 1):
+            y_data[i] = (i - x_prev) * ydiff_over_tdiff + y_prev
 
         x_prev = x_next
         y_prev = y_next
