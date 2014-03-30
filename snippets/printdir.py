@@ -9,14 +9,20 @@ Created in: PyCharm Community Edition
 __author__ = 'Nathan Starkweather'
 
 
-def printdir(obj, **printkwargs):
+def printdir(obj, hide_private=True, **printkwargs):
     """
     @param obj: any python object
     @type obj: variant
     @return: None
     @rtype: None
     """
-    for attr in dir(obj):
+    attrs = dir(obj)
+    if hide_private:
+        attrs = [a for a in attrs if not a.startswith('__')]
+        if not attrs:
+            print("No non-private attrs")
+
+    for attr in attrs:
         try:
             print(attr, getattr(obj, attr), **printkwargs)
         except Exception as error:

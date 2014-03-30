@@ -58,7 +58,7 @@ def _make_constants(f, builtin_only=False, stoplist=[], verbose=False):
                     newconsts.append(value)
                 newcode[i] = LOAD_CONST
                 newcode[i+1] = pos & 0xFF
-                print(pos, pos == pos % 0xFF)
+                print(pos, pos == pos & 0xFF)
                 newcode[i+2] = pos >> 8
                 changed = True
                 if verbose:
