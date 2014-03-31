@@ -33,6 +33,9 @@ def setUpModule():
                 pass
 
 
+foo = None
+
+
 class TestMakeConstantsInner(unittest.TestCase):
 
     def check_co_consts(self, func, expected, msg=None):
@@ -79,6 +82,56 @@ class TestMakeConstantsInner(unittest.TestCase):
         self.assertIsNotNone(result_func, "Forgot to return function!")
         self.assertIsNot(result_func, testfunc2, "Function not modified")
         self.check_co_consts(result_func, expected, 'testfunc2')
+
+    def test_simple_store_global(self):
+        """
+        Test a function with STORE_GLOBAL opcodes
+        """
+
+        def test_globals():
+            global foo
+            print(foo)
+            foo = 1
+
+        expected = test_globals
+        result = _make_constants(expected)
+
+        self.assertIs(expected, result, "Function incorrectly modified")
+
+    def test_class_method_simple(self):
+        """
+        Make sure the function works on class instance methods.
+        """
+
+        from io import StringIO
+        dummy = StringIO()
+
+        class TestClass():
+
+            def testfunc(self, arg):
+                foo = float(arg)
+                bar = str(foo)
+                baz = len(bar)
+                print(baz, file=dummy)
+                return baz
+
+            def __len__(self):
+                return 1
+
+        t = TestClass()
+        expected = t.testfunc
+        result = _make_constants(expected)
+        expected_consts = (None, 'file', float, str, len, print)
+
+        self.check_co_consts(result, expected_consts)
+
+        # make sure it works
+        call_result = t.testfunc(12)
+        exp = 4
+        self.assertEqual(call_result, exp)
+        self.assertEqual(str(call_result) + '\n', dummy.getvalue())
+
+
 
 
 def tearDownModule():

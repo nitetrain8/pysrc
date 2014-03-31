@@ -24,7 +24,7 @@ def printdir(obj, hide_private=True, **printkwargs):
 
     for attr in attrs:
         try:
-            print(attr, getattr(obj, attr), **printkwargs)
+            print("%.80s" % attr, getattr(obj, attr), **printkwargs)
         except Exception as error:
             print(error, **printkwargs)
 
