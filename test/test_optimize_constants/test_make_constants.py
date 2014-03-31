@@ -36,7 +36,7 @@ def setUpModule():
 foo = None
 
 
-class TestMakeConstantsInner(unittest.TestCase):
+class TestMakeConstantsCoConsts(unittest.TestCase):
 
     def check_co_consts(self, func, expected, msg=None):
         """
@@ -132,6 +132,61 @@ class TestMakeConstantsInner(unittest.TestCase):
         self.assertEqual(str(call_result) + '\n', dummy.getvalue())
 
 
+class TestMakeConstantsInOut(unittest.TestCase):
+
+    def test_make_constants_smooth1(self):
+        """
+        import the unittest for smooth1. Run them once to verify passing,
+        then modify the module namespace with modified function, and run again.
+
+        This is probably not the best way to do this, but oh well.
+
+        @return: None
+        @rtype: None
+        """
+
+        from pysrc.test.test_smooth import test_smooth
+
+        ref_smooth = test_smooth.smooth1
+        new_smooth = _make_constants(ref_smooth)
+
+        if new_smooth is ref_smooth:
+            raise self.failureException("Function not modified- unexpected failure")
+
+        test_case = test_smooth.Smooth()
+
+        tests = (
+            test_case.test_smooth1_1,
+            test_case.test_smooth1_2,
+            test_case.test_smooth1_real1
+        )
+
+        # Catch and re-raise each exception on failure for
+        # accurate error reporting
+
+        # first pass- assert all the other tests actually pass.
+        # even though its not our fault, silently ignoring errors
+        # could result in false positives.
+
+        for test in tests:
+            try:
+                test()
+            except self.failureException:
+                raise self.failureException("Unrelated test unexpectedly failed") from None
+            except:
+                raise self.failureException("Unknown error from unrelated test") from None
+
+        # Second pass- modify and see if they still pass
+
+        for test in tests:
+
+            test_smooth.smooth1 = new_smooth
+            try:
+                test()
+            except self.failureException:
+                # restore ref_smooth in case future tests added to run
+                test_smooth.smooth1 = ref_smooth
+                raise self.failureException("Mismatch result after modification in test %s" % test.__name__)
 
 
 def tearDownModule():

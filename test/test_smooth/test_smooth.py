@@ -57,14 +57,16 @@ class Smooth(unittest.TestCase):
         """
         old_ctx = getcontext()
         setcontext(self.ctx)
+
+        # unary plus forces re-calculation of # digits
         exp = +exp
         result = +result
-        cmp = exp.compare(result)
+        not_equal = exp.compare(result)
+
         setcontext(old_ctx)
-        if cmp:
+
+        if not_equal:
             raise self.failureException((msg or '') + str(exp) + ' ' + str(result))
-
-
 
     def do_smooth1_test(self, x, y, exp_ydata=None):
         """
@@ -141,9 +143,6 @@ class Smooth(unittest.TestCase):
 
         x = map(float, x)
         self.do_smooth1_test(x, y)
-
-
-
 
 
 def tearDownModule():
