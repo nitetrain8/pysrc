@@ -12,7 +12,8 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-from pysrc.snippets.optimize_constants import _make_constants
+from pysrc.snippets.optimize_constants import _make_constant_globals
+import builtins
 
 __author__ = 'Administrator'
 
@@ -37,6 +38,10 @@ foo = None
 
 
 class TestMakeConstantsCoConsts(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.test_env = vars(builtins).copy()
 
     def check_co_consts(self, func, expected, msg=None):
         """
@@ -64,7 +69,7 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
             print(len(dummy))
 
         expected = (None, print, len)
-        result_func = _make_constants(testfunc1)
+        result_func = _make_constant_globals(testfunc1, self.test_env)
 
         self.assertIsNotNone(result_func, "Forgot to return function!")
         self.assertIsNot(result_func, testfunc1, "Function not modified")
@@ -77,7 +82,7 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
             print(dummy_len)
 
         expected = (None, len, print)
-        result_func = _make_constants(testfunc2)
+        result_func = _make_constant_globals(testfunc2, self.test_env)
 
         self.assertIsNotNone(result_func, "Forgot to return function!")
         self.assertIsNot(result_func, testfunc2, "Function not modified")
@@ -94,7 +99,7 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
             foo = 1
 
         expected = test_globals
-        result = _make_constants(expected)
+        result = _make_constant_globals(expected, self.test_env)
 
         self.assertIs(expected, result, "Function incorrectly modified")
 
@@ -108,6 +113,7 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
 
         class TestClass():
 
+            # noinspection PyMethodMayBeStatic
             def testfunc(self, arg):
                 foo = float(arg)
                 bar = str(foo)
@@ -120,7 +126,7 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
 
         t = TestClass()
         expected = t.testfunc
-        result = _make_constants(expected)
+        result = _make_constant_globals(expected, self.test_env)
         expected_consts = (None, 'file', float, str, len, print)
 
         self.check_co_consts(result, expected_consts)
@@ -133,6 +139,10 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
 
 
 class TestMakeConstantsInOut(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.test_env = vars(builtins).copy()
 
     def test_make_constants_smooth1(self):
         """
@@ -148,7 +158,7 @@ class TestMakeConstantsInOut(unittest.TestCase):
         from pysrc.test.test_smooth import test_smooth
 
         ref_smooth = test_smooth.smooth1
-        new_smooth = _make_constants(ref_smooth)
+        new_smooth = _make_constant_globals(ref_smooth, self.test_env)
 
         if new_smooth is ref_smooth:
             raise self.failureException("Function not modified- unexpected failure")

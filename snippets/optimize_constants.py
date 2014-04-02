@@ -61,7 +61,7 @@ def _getops(codestr):
     return oplist
 
 
-def _make_constants(f, env=None, verbose=False):
+def _make_constant_globals(f, env, verbose=False):
     """
     My implementation of make-constants function. Yay!.
 
@@ -76,22 +76,13 @@ def _make_constants(f, env=None, verbose=False):
     """
 
     if verbose:
-        print("Attempting to optimize ")
+        print("Attempting to optimize", f.__name__)
 
     co = f.__code__
     newcode = list(co.co_code)
     co_names = co.co_names
     newconsts = list(co.co_consts)
     newconsts_append = newconsts.append
-
-    if env is None:
-        env = {}
-
-    # reflect any overrides to builtins
-    import builtins
-
-    env.update(vars(builtins))
-    env.update(f.__globals__)
 
     env_get = env.get
 
@@ -156,4 +147,55 @@ def _make_constants(f, env=None, verbose=False):
         new_func = make_method(new_func, f.__self__)
 
     return new_func
+
+
+def make_constants(env=None, blacklist=(), verbose=False, **kwargs):
+    """
+    public interface to _make_constant_globals, for sake of accepting whitelist
+    in the form of kwargs
+    @return: make_constants function wrapper
+    @rtype: types.FunctionType
+    """
+
+    import builtins
+
+    def constants_wrapper(f):
+        """
+        @param f: function to wrap
+        @type f: types.FunctionType
+        @return: types.FunctionType
+        @rtype: types.FunctionType
+        """
+        # Make real dict in reverse order of priority
+        # most important last -> overrides earlier
+        # first, default global values
+
+        real_env = vars(builtins).copy()
+        real_env.update(f.__globals__)
+
+        # update user specified, and discard from blacklist
+        # update kwargs with env has same effect as updating
+        # real env with kwargs then env, but makes it easier
+        # to error check vs blacklist
+
+        if env is not None:
+            kwargs.update(env)
+
+        real_env.update(kwargs)
+        pop = real_env.pop
+        if verbose:
+            sentinel = object()
+            for key in blacklist:
+                if pop(key, sentinel) is not sentinel:
+                    print("Removing %s from env for function <%s>" % (key, f.__name__))
+        else:
+            for key in blacklist:
+                pop(key, None)
+
+        return _make_constant_globals(f, env, verbose)
+
+    return constants_wrapper()
+
+
+
 
