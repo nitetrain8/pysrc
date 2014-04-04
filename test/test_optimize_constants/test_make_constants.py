@@ -12,7 +12,7 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-from pysrc.snippets.optimize_constants import _make_constant_globals
+from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants
 import builtins
 
 __author__ = 'Administrator'
@@ -46,7 +46,7 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
     def check_co_consts(self, func, expected, msg=None):
         """
         @type func: types.FunctionType
-        @type expected: tuple
+        @type expected: tuple | list
         @type msg: None | str
         @return:
         @rtype:
@@ -138,11 +138,35 @@ class TestMakeConstantsCoConsts(unittest.TestCase):
         self.assertEqual(str(call_result) + '\n', dummy.getvalue())
 
 
-class TestMakeConstantsInOut(unittest.TestCase):
+class TestMakeConstantsInOut(TestMakeConstantsCoConsts):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.test_env = vars(builtins).copy()
+    def assertDecimalEqual(self, result, expected, msg=None):
+        """
+        @param result:
+        @type result:
+        @param expected:
+        @type expected:
+        @param msg:
+        @type msg:
+        @return:
+        @rtype:
+        """
+
+        from decimal import localcontext
+
+        with localcontext() as ctx:
+            ctx.prec = 3  # not testing decimal precision atm
+            res = +result
+            exp = +expected
+
+            cmp = res == exp
+
+        if not cmp:
+            if msg is None:
+                msg = ''
+
+            msg += "Decimals do not match: %.3f != %.3f" % (res, exp)
+            raise self.failureException(msg)
 
     def test_make_constants_smooth1(self):
         """
@@ -197,6 +221,78 @@ class TestMakeConstantsInOut(unittest.TestCase):
                 # restore ref_smooth in case future tests added to run
                 test_smooth.smooth1 = ref_smooth
                 raise self.failureException("Mismatch result after modification in test %s" % test.__name__)
+
+    def test_make_constants_est_env(self):
+        """
+        Test runtime function created during an ipython session.
+        """
+
+        # Defining function here results in LOAD_DEREF instead of
+        # LOAD_GLOBAL, so exec the source code in a custom global namespace.
+
+        from scripts.run.temp_sim import TempSim, D
+
+        funcdef = """def est_env(pv):
+    env = pv * c / (h * hd)
+    return env
+"""
+
+        ns = {
+            'hd' : D('4.5'),
+            'c' : TempSim.DEFAULT_COOL_CONSTANT,
+            'h' : TempSim.DEFAULT_HEAT_CONSTANT,
+        }
+
+        exec(funcdef, ns, ns)
+        est_env = ns['est_env']
+
+        exp_consts = [None]
+        self.check_co_consts(est_env, exp_consts)
+
+        Decimal = D
+
+        x_values = tuple(range(15))
+        y_values = [
+            Decimal('-0.000000'),
+            Decimal('-0.09120879781676413255360623782'),
+            Decimal('-0.1824175956335282651072124756'),
+            Decimal('-0.2736263934502923976608187135'),
+            Decimal('-0.3648351912670565302144249513'),
+            Decimal('-0.4560439890838206627680311891'),
+            Decimal('-0.5472527869005847953216374269'),
+            Decimal('-0.6384615847173489278752436647'),
+            Decimal('-0.7296703825341130604288499025'),
+            Decimal('-0.8208791803508771929824561404'),
+            Decimal('-0.9120879781676413255360623782'),
+            Decimal('-1.003296775984405458089668616'),
+            Decimal('-1.094505573801169590643274854'),
+            Decimal('-1.185714371617933723196881092'),
+            Decimal('-1.276923169434697855750487329')
+        ]
+
+        result1 = [est_env(x) for x in x_values]
+
+        assertDecimalEqual = self.assertDecimalEqual
+
+        for res, exp in zip(result1, y_values):
+            assertDecimalEqual(res, exp, "Test failed initial pass")
+
+        # modify the function. While we're here, pass in a bad namespace
+        # to test blacklist
+
+        bad_blacklist = {'hd' : 'bobcat'}
+
+        bad_wrapper = make_constants(ns, bad_blacklist)
+        self.assertRaises(ValueError, bad_wrapper, est_env)
+
+        modified_env = make_constants(ns, None, True)(est_env)
+        result2 = [modified_env(x) for x in x_values]
+
+        for res, exp in zip(result2, y_values):
+            assertDecimalEqual(res, exp, "Modified function produced bad result")
+
+        exp_consts.extend((ns['c'], ns['h'], ns['hd']))
+        self.check_co_consts(modified_env, exp_consts)
 
 
 def tearDownModule():

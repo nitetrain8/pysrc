@@ -64,7 +64,6 @@ def _getops(codestr):
 def _make_constant_globals(f, env, verbose=False):
     """
     My implementation of make-constants function. Yay!.
-
     Original: http://code.activestate.com/recipes/576904/
 
     @param f:
@@ -75,8 +74,11 @@ def _make_constant_globals(f, env, verbose=False):
     @rtype: types.FunctionType
     """
 
+    mod = getattr(f, '__module__', 'None')
+    name = f.__qualname__
+
     if verbose:
-        print("Attempting to optimize", f.__name__)
+        print("Attempting to optimize <%s.%s>." % (mod, name))
 
     co = f.__code__
     newcode = list(co.co_code)
@@ -149,10 +151,16 @@ def _make_constant_globals(f, env, verbose=False):
     return new_func
 
 
-def make_constants(env=None, blacklist=(), verbose=False, **kwargs):
+def make_constants(env=None, blacklist=None, verbose=False, **kwargs):
     """
     public interface to _make_constant_globals, for sake of accepting whitelist
     in the form of kwargs
+    @param env: pass in a dict mapping names <=> values to override. Caller
+                responsible for ensuring that names map to the correct value.
+    @type env: dict
+    @type blacklist: dict | None
+    @type verbose: bool
+    @param kwargs:
     @return: make_constants function wrapper
     @rtype: types.FunctionType
     """
@@ -182,19 +190,23 @@ def make_constants(env=None, blacklist=(), verbose=False, **kwargs):
             kwargs.update(env)
 
         real_env.update(kwargs)
-        pop = real_env.pop
-        if verbose:
-            sentinel = object()
-            for key in blacklist:
-                if pop(key, sentinel) is not sentinel:
-                    print("Removing %s from env for function <%s>" % (key, f.__name__))
-        else:
-            for key in blacklist:
-                pop(key, None)
 
-        return _make_constant_globals(f, env, verbose)
+        if blacklist is not None:
+            for key in blacklist:
+                try:
+                    if real_env[key] == blacklist[key]:
+                        del real_env[key]
+                        if verbose:
+                            print("Removing %s from env for function <%s>" % (key, f.__name__))
+                    else:
+                        raise ValueError("Environment mapping {%r : %r} != blacklist mapping {%r : %r}"
+                                         % (key, real_env[key], key, blacklist[key]))
+                except KeyError:
+                    pass
 
-    return constants_wrapper()
+        return _make_constant_globals(f, real_env, verbose)
+
+    return constants_wrapper
 
 
 
