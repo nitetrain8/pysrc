@@ -21,6 +21,39 @@ make_function = FunctionType
 make_code = CodeType
 make_method = MethodType
 
+# get pyssizet size at runtime by checking against
+# the arg parsing typecode.
+
+import ctypes as _ctypes
+from _ctypes import sizeof as _csizeof
+from struct import calcsize as _calcsize
+_py_ssize_t_bytes = _calcsize('n')
+if _py_ssize_t_bytes == 8:
+    Py_ssize_t = _ctypes.c_uint64
+elif _py_ssize_t_bytes == 4:
+    Py_ssize_t = _ctypes.c_uint32
+else:
+    raise SystemError("size of Py_ssize_t does not match known values")
+
+# Py_ssize_t should be the same size as ssize_t, but unsigned
+if _csizeof(_ctypes.c_ssize_t) != _csizeof(Py_ssize_t):
+    raise SystemError("Ambiguous ssize_t size")
+
+
+def hack_tuple(ob, i, newitem):
+
+    # set struct item i to the new value
+    # must pass in address (PyObject *) for ob, newitem
+    # obtained by id
+    # tricky part -> decreasing refcount of previous item
+
+    prev = ob[i]
+    prev_addr = id(prev)
+
+
+    setitem = _ctypes.pythonapi.PyStructSequence_SetItem
+
+
 
 def getarg(codestr, i):
     """
@@ -59,6 +92,18 @@ def _getops(codestr):
         if op > GREATER_HAVE_ARG:
             i += 2
     return oplist
+
+
+def code_maker(co, newcode, newconsts):
+    return make_code(co.co_argcount, co.co_kwonlyargcount, co.co_nlocals,
+                     co.co_stacksize, co.co_flags, bytes(newcode),
+                     tuple(newconsts), co.co_names, co.co_varnames,
+                     co.co_filename, co.co_name, co.co_firstlineno,
+                     co.co_lnotab, co.co_freevars, co.co_cellvars)
+
+
+def function_maker(old_func, new_code):
+    return make_function(new_code, old_func.__globals__, old_func.__name__, old_func.__defaults__, old_func.__closure__)
 
 
 def _make_constant_globals(f, env, verbose=False):
@@ -137,13 +182,8 @@ def _make_constant_globals(f, env, verbose=False):
     # Make code object from type of code in case there
     # is a difference between FunctionType, MethodType, etc
 
-    f_code = make_code(co.co_argcount, co.co_kwonlyargcount, co.co_nlocals,
-                       co.co_stacksize, co.co_flags, bytes(newcode),
-                       tuple(newconsts), co.co_names, co.co_varnames,
-                       co.co_filename, co.co_name, co.co_firstlineno,
-                       co.co_lnotab, co.co_freevars, co.co_cellvars)
-
-    new_func = make_function(f_code, f.__globals__, f.__name__, f.__defaults__, f.__closure__)
+    f_code = code_maker(co, newcode, newconsts)
+    new_func = function_maker(f, f_code)
 
     if type(f) is MethodType:
         new_func = make_method(new_func, f.__self__)

@@ -295,6 +295,26 @@ class TestMakeConstantsInOut(TestMakeConstantsCoConsts):
         self.check_co_consts(modified_env, exp_consts)
 
 
+class OptimizeDirwalk(TestMakeConstantsCoConsts):
+
+    def test_dirwalk(self):
+
+        # Optimizing a recursive function to have a reference to itself,
+        # when a global name is not defined but added to the function through make_constants
+        # causes a NameError to occur, because the 'constant' self-reference actually
+        # refers to the old function
+
+        from pysrc.test.test_optimize_constants.test_input.fix_dirwalk import dirwalk
+        from os import listdir
+
+        dirwalk = make_constants(dirwalk=dirwalk, listdir=listdir, OSError=OSError, join='\\'.join)(dirwalk)
+        dirwalk = make_constants(dirwalk=dirwalk)(dirwalk)
+        try:
+            dirwalk(curdir)
+        finally:
+            print(dirwalk.__code__.co_consts)
+            pass
+
 def tearDownModule():
     """
     @return: None
