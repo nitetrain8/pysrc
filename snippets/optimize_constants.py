@@ -17,42 +17,58 @@ GREATER_HAVE_ARG = HAVE_ARGUMENT + 1
 
 from types import FunctionType, CodeType, MethodType
 
+# The type constructors actually do the work, but
+# providing aliases here so that it is easier to read our code.
 make_function = FunctionType
 make_code = CodeType
 make_method = MethodType
 
-# get pyssizet size at runtime by checking against
-# the arg parsing typecode.
 
-import ctypes as _ctypes
-from _ctypes import sizeof as _csizeof
-from struct import calcsize as _calcsize
-_py_ssize_t_bytes = _calcsize('n')
-if _py_ssize_t_bytes == 8:
-    Py_ssize_t = _ctypes.c_uint64
-elif _py_ssize_t_bytes == 4:
-    Py_ssize_t = _ctypes.c_uint32
-else:
-    raise SystemError("size of Py_ssize_t does not match known values")
+def hack_tuple(ob, i, newitem, incref=True):
+    """
+    @param ob: tuple
+    @type ob: tuple
+    @param i: index
+    @type i: int
+    @param newitem: new item
+    @type newitem: T
+    @param incref: increase reference or not. Don't increase ref on recursive hax.
+    @type incref:
+    @return:
+    @rtype:
+    """
+    # Set the ith item of sequence item ob to newitem
+    # using python capi exposed by _ctypes. While most python capi
+    # performs runtime type checking, we can use PyStructSequence_SetItem
+    # to arbitrarily set the item. Perform some checking here to make sure
+    # we don't screw everything up.
 
-# Py_ssize_t should be the same size as ssize_t, but unsigned
-if _csizeof(_ctypes.c_ssize_t) != _csizeof(Py_ssize_t):
-    raise SystemError("Ambiguous ssize_t size")
+    if type(ob) is not tuple:
+        raise TypeError("Can't hack non-tuple item.")
 
+    if i >= len(ob):
+        raise IndexError("Index out of range.")
 
-def hack_tuple(ob, i, newitem):
+    if newitem is ob and incref:
+        raise TypeError("Refusing to increase reference on recursive SetItem")
 
-    # set struct item i to the new value
-    # must pass in address (PyObject *) for ob, newitem
-    # obtained by id
-    # tricky part -> decreasing refcount of previous item
+    from _ctypes import Py_DECREF, Py_INCREF
+    from ctypes import pythonapi, py_object
 
-    prev = ob[i]
-    prev_addr = id(prev)
+    # get copy of old item, set new item, decrease ref of old
+    # item. if incref, increase ref of new item.
+    # for fixing recursive functions, don't incref. (unless testing
+    # reveals segfault)
 
+    pyob_olditem = ob[i]
+    pyob_new = py_object(newitem)
+    pyob_ob = py_object(ob)
 
-    setitem = _ctypes.pythonapi.PyStructSequence_SetItem
+    pythonapi.PyStructSequence_SetItem(pyob_ob, i, pyob_new)
 
+    Py_DECREF(pyob_olditem)
+    if incref:
+        Py_INCREF(pyob_new)
 
 
 def getarg(codestr, i):
@@ -187,6 +203,11 @@ def _make_constant_globals(f, env, verbose=False):
 
     if type(f) is MethodType:
         new_func = make_method(new_func, f.__self__)
+
+    # fix recursive functions
+    if f in new_func.__code__.co_consts:
+        co_consts = new_func.__code__.co_consts
+        hack_tuple(co_consts, co_consts.index(f), new_func, False)
 
     return new_func
 

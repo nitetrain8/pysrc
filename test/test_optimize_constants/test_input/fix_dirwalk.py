@@ -10,9 +10,9 @@ __author__ = 'Nathan Starkweather'
 
 from os import listdir
 
+
 # noinspection PyUnresolvedReferences
 def dirwalk(dir):
-    print(dirwalk.__code__.co_consts)
     contents = listdir(dir)
     paths = []; path_append = paths.append
     for f in contents:

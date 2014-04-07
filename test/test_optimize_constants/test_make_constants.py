@@ -295,7 +295,47 @@ class TestMakeConstantsInOut(TestMakeConstantsCoConsts):
         self.check_co_consts(modified_env, exp_consts)
 
 
-class OptimizeDirwalk(TestMakeConstantsCoConsts):
+from pysrc.snippets.optimize_constants import hack_tuple
+
+
+class TestHax(TestMakeConstantsCoConsts):
+
+    def test_hack_tuple_recursive(self):
+
+        mytuple = (1, 2, 3)
+        self.assertRaises(TypeError, hack_tuple, mytuple, 1, mytuple)
+
+        hack_tuple(mytuple, 1, mytuple, False)
+        self.assertIs(mytuple[1], mytuple)
+
+    def test_hack_tuple_memleak(self):
+        # Make sure hack tuple doesn't leave memory leaks
+
+        from ctypes import c_uint64
+        import gc
+
+        # XXX DO NOT CHANGE THIS!
+        # If built using a tuple literal, tuple will be ref'd as a
+        # code/frame constant and be off by 1 for the test.
+        mytuple = tuple([1, 2, 3])
+
+        rfc = c_uint64.from_address(id(mytuple))
+
+        self.assertTrue(gc.is_tracked(mytuple))
+        self.assertEqual(rfc.value, 1)
+        b = mytuple
+        self.assertEqual(rfc.value, 2)
+        del b
+        self.assertEqual(rfc.value, 1)
+
+        hack_tuple(mytuple, 1, mytuple, False)
+        self.assertEqual(rfc.value, 1)
+
+        del mytuple
+        self.assertEqual(rfc.value, 0xFFFFFFFFFFFFFFFF) # 2**64 - 1
+
+        gc.collect()  # if interpreter segfaults, the test failed :-)
+
 
     def test_dirwalk(self):
 
@@ -312,8 +352,18 @@ class OptimizeDirwalk(TestMakeConstantsCoConsts):
         try:
             dirwalk(curdir)
         finally:
-            print(dirwalk.__code__.co_consts)
             pass
+
+        import ctypes
+        rc = ctypes.c_uint64.from_address(id(dirwalk))
+
+        self.assertEqual(rc.value, 1)
+
+        import gc
+
+        del dirwalk
+        gc.collect()
+
 
 def tearDownModule():
     """
