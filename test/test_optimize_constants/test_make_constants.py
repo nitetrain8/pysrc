@@ -315,6 +315,7 @@ class OptimizeDirwalk(TestMakeConstantsCoConsts):
             print(dirwalk.__code__.co_consts)
             pass
 
+
 def tearDownModule():
     """
     @return: None
