@@ -12,8 +12,9 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants
+from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants, _getref
 import builtins
+from pysrc.test.test_optimize_constants.test_hax import getref
 
 __author__ = 'Administrator'
 
@@ -295,7 +296,7 @@ class TestMakeConstantsInOut(TestMakeConstantsCoConsts):
         self.check_co_consts(modified_env, exp_consts)
 
 
-from pysrc.snippets.optimize_constants import hack_tuple
+from pysrc.snippets.optimize_constants import _tuple_set_item
 
 
 class TestHax(TestMakeConstantsCoConsts):
@@ -303,9 +304,9 @@ class TestHax(TestMakeConstantsCoConsts):
     def test_hack_tuple_recursive(self):
 
         mytuple = (1, 2, 3)
-        self.assertRaises(TypeError, hack_tuple, mytuple, 1, mytuple)
+        self.assertRaises(TypeError, _tuple_set_item, list(mytuple), 1, mytuple)
 
-        hack_tuple(mytuple, 1, mytuple, False)
+        _tuple_set_item(mytuple, 1, mytuple)
         self.assertIs(mytuple[1], mytuple)
 
     def test_hack_tuple_memleak(self):
@@ -328,34 +329,37 @@ class TestHax(TestMakeConstantsCoConsts):
         del b
         self.assertEqual(rfc.value, 1)
 
-        hack_tuple(mytuple, 1, mytuple, False)
+        _tuple_set_item(mytuple, 1, mytuple)
         self.assertEqual(rfc.value, 1)
 
         del mytuple
-        self.assertEqual(rfc.value, 0xFFFFFFFFFFFFFFFF) # 2**64 - 1
+
+        # Because tuples 'cannot' have references to themselves,
+        # the tuple deallocator reduces refcount to -1 due to
+        # nested reference. This will cause memory leaks, but we test for
+        # its presense to keep an eye on the behavior of the code.
+        # XXX Not sure if the above is actually true
+
+        self.assertEqual(rfc.value, 0xFFFFFFFFFFFFFFFF)  # 2**64 - 1
 
         gc.collect()  # if interpreter segfaults, the test failed :-)
-
 
     def test_dirwalk(self):
 
         # Optimizing a recursive function to have a reference to itself,
         # when a global name is not defined but added to the function through make_constants
         # causes a NameError to occur, because the 'constant' self-reference actually
-        # refers to the old function
+        # refers to the old function.
 
         from pysrc.test.test_optimize_constants.test_input.fix_dirwalk import dirwalk
         from os import listdir
 
         dirwalk = make_constants(dirwalk=dirwalk, listdir=listdir, OSError=OSError, join='\\'.join)(dirwalk)
         dirwalk = make_constants(dirwalk=dirwalk)(dirwalk)
-        try:
-            dirwalk(curdir)
-        finally:
-            pass
 
-        import ctypes
-        rc = ctypes.c_uint64.from_address(id(dirwalk))
+        dirwalk(curdir)
+
+        rc = _getref(dirwalk)
 
         self.assertEqual(rc.value, 1)
 
@@ -363,6 +367,8 @@ class TestHax(TestMakeConstantsCoConsts):
 
         del dirwalk
         gc.collect()
+
+        self.assertEqual(rc.value, 0)
 
 
 def tearDownModule():

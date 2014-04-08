@@ -30,11 +30,11 @@ del foo
 sys.stdout.flush()
 # input('')
 
-# from pysrc.snippets.optimize_constants import hack_tuple
+# from pysrc.snippets.optimize_constants import _tuple_set_item
 #
 # tpl = foo.__code__.co_consts
 # print(c_uint32.from_address(id(foo)))
-# hack_tuple(tpl, 2, foo, False)
+# _tuple_set_item(tpl, 2, foo, False)
 # tpl_addr = id(tpl)
 # tpl_ptr = c_uint32.from_address(tpl_addr)
 # print(tpl_ptr.value)
