@@ -70,15 +70,18 @@ def _hack_callback(hackref):
 
     But, we can be reasonably sure that the refcount is zero, so we can
      override that item. We don't have to worry about Py_DECREF being called
-     by the C code, but if the implementation changed, we would.
+     on an undefined object because of our shoice of function, but if the C API
+     implementation changed, we would.
 
     @param hackref: _FuncHackRef
     @type hackref: _FuncHackRef
     """
-    # Remove the reference from the cache.
+
+    # func_rc = _Py_ssize_t.from_address(hackref.f_addr)
+
+    # Remove the reference from the cache!
     _hack_cache.remove(hackref)
     _Py_INCREF(None)
-    func_rc = _Py_ssize_t.from_address(hackref.f_addr)
     _tuple_set_item(hackref.f_const, hackref.f_index, None)
 
 
@@ -89,12 +92,10 @@ class _FuncHackRef(_wref):
     def __new__(cls, func, f_consts, f_index):
 
         self = _wref.__new__(cls, func, _hack_callback)
-
         self.ref_cb = _hack_callback
         self.f_addr = id(func)
         self.f_const = f_consts
         self.f_index = f_index
-
         return self
 
     # noinspection PyUnusedLocal
