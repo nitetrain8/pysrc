@@ -23,8 +23,77 @@ make_function = FunctionType
 make_code = CodeType
 make_method = MethodType
 
+# get pyssizet size at runtime by checking against
+# the arg parsing typecode.
 
-def hack_tuple(ob, i, newitem, incref=True):
+import ctypes as _ctypes
+from weakref import ref as _wref
+from ctypes import py_object as _py_object, pythonapi as _pythonapi
+from _ctypes import sizeof as _csizeof, Py_DECREF as _Py_DECREF, Py_INCREF as _Py_INCREF
+from struct import calcsize as _calcsize
+
+_py_ssize_t_bytes = _calcsize('n')
+if _py_ssize_t_bytes == 8:
+    _Py_ssize_t = _ctypes.c_uint64
+elif _py_ssize_t_bytes == 4:
+    _Py_ssize_t = _ctypes.c_uint32
+else:
+    raise SystemError("size of _Py_ssize_t does not match known values")
+
+# _Py_ssize_t should be the same size as ssize_t, but unsigned
+if _csizeof(_ctypes.c_ssize_t) != _csizeof(_Py_ssize_t):
+    raise SystemError("Ambiguous ssize_t size")
+
+# cache to store list of weak references. We need this so that
+# the weak ref object itself stays alive so that the callback can
+# be called.
+_hack_cache = set()
+
+
+def _hack_callback(hackref):
+    """
+
+    Execute the cleanup action by the function hack weakref.
+    Because the weakref callback can never be called until func's refcount
+    is 0, we should NOT call Py_DECREF on the target index, or even access it
+    to check, or we will segfault.
+
+    But, we can be reasonably sure that the refcount is zero, so we can
+     override that item. We don't have to worry about Py_DECREF being called
+     by the C code, but if the implementation changed, we would.
+
+    @param hackref: _FuncHackRef
+    @type hackref: _FuncHackRef
+    """
+    # Remove the reference from the cache.
+    _hack_cache.remove(hackref)
+
+    pyob_const = _py_object(hackref.f_const)
+    pyob_index = _Py_ssize_t(hackref.f_index)
+    pyob_none = _py_object(None)
+
+    rc = _Py_ssize_t.from_address(id(hackref.f_const))
+    old_rc = rc.value
+    rc.value = 1
+
+    _Py_INCREF(None)
+    _pythonapi.PyTuple_SetItem(pyob_const, pyob_index, pyob_none)
+
+    rc.value = old_rc
+
+
+class _FuncHackRef(_wref):
+
+    __slots__ = 'f_const', 'f_index'
+
+    def __new__(cls, func):
+        self = super().__new__(func, _hack_callback)
+        self.f_const = func.__code__.co_consts
+        self.f_index = self.f_const.index(func)
+        return self
+
+
+def hack_tuple(ob, i, newitem):
     """
     @param ob: tuple
     @type ob: tuple
@@ -32,8 +101,6 @@ def hack_tuple(ob, i, newitem, incref=True):
     @type i: int
     @param newitem: new item
     @type newitem: T
-    @param incref: increase reference or not. Don't increase ref on recursive hax.
-    @type incref:
     @return:
     @rtype:
     """
@@ -49,26 +116,60 @@ def hack_tuple(ob, i, newitem, incref=True):
     if i >= len(ob):
         raise IndexError("Index out of range.")
 
-    if newitem is ob and incref:
-        raise TypeError("Refusing to increase reference on recursive SetItem")
+    prev = ob[i]
+    _Py_DECREF(prev)
 
-    from _ctypes import Py_DECREF, Py_INCREF
-    from ctypes import pythonapi, py_object
+    pyob_ob = _py_object(ob)
+    pyob_newitem = _py_object(newitem)
 
-    # get copy of old item, set new item, decrease ref of old
-    # item. if incref, increase ref of new item.
-    # for fixing recursive functions, don't incref. (unless testing
-    # reveals segfault)
+    # set ref count to 1 temporarily, to avoid PyErrBadInternalCall()
+    # TypeError triggered by PyTuple_SetItem if refcount > 1.
+    # we could just use PyStructSequence_SetItem, but this seems more robust
+    # against potential API changes, and we aren't too concerned with
+    # performance here.
 
-    pyob_olditem = ob[i]
-    pyob_new = py_object(newitem)
-    pyob_ob = py_object(ob)
+    rc = _Py_ssize_t.from_address(id(ob))
+    old_rc = rc.value
+    rc.value = 1
 
-    pythonapi.PyStructSequence_SetItem(pyob_ob, i, pyob_new)
+    _pythonapi.PyTuple_SetItem(pyob_ob, _Py_ssize_t(i), pyob_newitem)
 
-    Py_DECREF(pyob_olditem)
-    if incref:
-        Py_INCREF(pyob_new)
+    rc.value = old_rc
+
+
+def _hack_recursive_func(new_func, old_func):
+    """
+
+    Hack the recursive function to contain a constant reference
+    to itself.
+
+    1) Use low-level capi (via hack_tuple) to mutate the co_consts
+     tuple object of the function to contain a constant self-reference.
+     Set the 'incref' parameter to false, as otherwise the memory would be
+     leaked (as there would be no way to decrease the final reference).
+
+    2) Set up a custom weak reference scheme that allows us to keep a
+    strong reference to the co_consts tuple, with a callback called when
+    the function is deleted.
+
+    3) With function deleted, we now have a tuple with an invald reference,
+    but we know which index contains that reference. Use capi again to
+    quietly re-write the tuple index to contain Py_None, then delete
+    the local tuple reference.
+
+    @param new_func: new function
+    @type new_func: FunctionType | MethodType
+    @param old_func: old function
+    @type old_func: FunctionType | MethodType
+    @return: None
+    @rtype: None
+    """
+
+    co_consts = new_func.__code__.co_consts
+    co_index = co_consts.index(old_func)
+
+    # Hack the tuple
+    hack_tuple(co_consts, co_index, new_func, False)
 
 
 def getarg(codestr, i):
@@ -204,10 +305,8 @@ def _make_constant_globals(f, env, verbose=False):
     if type(f) is MethodType:
         new_func = make_method(new_func, f.__self__)
 
-    # fix recursive functions
     if f in new_func.__code__.co_consts:
-        co_consts = new_func.__code__.co_consts
-        hack_tuple(co_consts, co_consts.index(f), new_func, False)
+        _hack_recursive_func(new_func, f)
 
     return new_func
 
