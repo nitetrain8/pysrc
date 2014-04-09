@@ -14,7 +14,7 @@ from os.path import dirname, join, exists
 from shutil import rmtree
 from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants, _getref
 import builtins
-from pysrc.test.test_optimize_constants.test_hax import getref
+
 
 __author__ = 'Administrator'
 

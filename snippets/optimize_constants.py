@@ -76,7 +76,9 @@ def _hack_callback(hackref):
     @param hackref: _FuncHackRef
     @type hackref: _FuncHackRef
     """
-
+    # refcount of new_func should be 3:
+    # ref in calling function (1), ref as parameter here (2),
+    # and reference held by the frame object (3)
     # func_rc = _Py_ssize_t.from_address(hackref.f_addr)
 
     # Remove the reference from the cache!
@@ -107,10 +109,11 @@ def _tuple_set_item(ob, i, newitem):
     """
 
     Python interface to CPython API function PyStructSequence_SetItem.
-    Handles conversion of arguments properly.
+    Handles conversion of arguments properly from python-space objects
+    to ctypes equivalents.
 
-    LIKE THE C API FUNCTION, DOES NOT INCREASE REF OF NEWITEM.
-    UNLIKE C API FUNCTION, DOES NOT DECREASE REF OF OLD ITEM
+    LIKE THE C API FUNCTION, DOES NOT INCREASE REF OF NEW ITEM.
+    UNLIKE C API FUNCTION, DOES NOT DECREASE REF OF OLD ITEM.
 
     @param ob: tuple
     @type ob: tuple
@@ -138,7 +141,7 @@ def _tuple_set_item(ob, i, newitem):
     pyob_i = _Py_ssize_t(i)
 
     # Note: PyTuple_SetItem calls XDECREF on the previous item
-    # PyStructSequence_SetItem DOES NOT
+    # PyStructSequence_SetItem DOES NOT (which is what is used here)
     #
     _PyHack_SetItem(pyob_ob, pyob_i, pyob_newitem)
 
@@ -177,10 +180,6 @@ def _hack_recursive_func(new_func, old_func):
     # Hack the tuple to set up weakref callback scheme
     _tuple_set_item(co_consts, co_index, new_func)
     hackref = _FuncHackRef(new_func, co_consts, co_index)
-
-    # refcount of new_func should be 3:
-    # ref in calling function (1), ref as parameter here (2),
-    # and reference held by the frame object (3)
     _hack_cache.add(hackref)
 
 
@@ -250,9 +249,10 @@ def _make_constant_globals(f, env, verbose=False):
 
     mod = getattr(f, '__module__', 'None')
     name = f.__qualname__
+    func_repr = "<%s.%s>" % (mod, name)
 
     if verbose:
-        print("Attempting to optimize <%s.%s>." % (mod, name))
+        print("Attempting to optimize %s." % func_repr)
 
     co = f.__code__
     newcode = list(co.co_code)
@@ -302,10 +302,12 @@ def _make_constant_globals(f, env, verbose=False):
                 newcode[i + 2] = pos >> 8
 
         i += 1
-        if op >= HAVE_ARGUMENT:
+        if op > GREATER_HAVE_ARG:
             i += 2
 
     if not changed:
+        if verbose:
+            print("No load globals found- returning unmodified function %s." % func_repr)
         return f
 
     # Make code object from type of code in case there
@@ -318,7 +320,13 @@ def _make_constant_globals(f, env, verbose=False):
         new_func = make_method(new_func, f.__self__)
 
     if f in new_func.__code__.co_consts:
+        if verbose:
+            print("Recursive function detected!")
+            print("Hacking recursive function %s!" % func_repr)
         _hack_recursive_func(new_func, f)
+
+    if verbose:
+        print("Returning improved function %s" % func_repr)
 
     return new_func
 
@@ -380,6 +388,28 @@ def make_constants(env=None, blacklist=None, verbose=False, **kwargs):
 
     return constants_wrapper
 
+
+def bind_all(ns, env=None, blacklist=None, verbose=False, **kwargs):
+    """
+    Bind all functions in a namespace using make_constants
+    @param ns: namespace
+    @type ns: dict
+    @return: None (mutate in place)
+    @rtype: None
+    """
+
+    Function = FunctionType
+    Method = MethodType
+
+    # use the same wrapper for all functions:
+    wrapper = make_constants(env, blacklist, verbose, **kwargs)
+
+    # make sure dict is not modified during iteration!
+    items = tuple(ns.items)
+
+    for k, v in items:
+        if type(v) is Function:
+            ns[k] = wrapper(v)
 
 
 
