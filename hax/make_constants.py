@@ -153,7 +153,7 @@ def bind_all(mc, builtin_only=False, stoplist=[],  verbose=False):
                 elif isinstance(v, type):
                     _bind_all(v, builtin_only, stoplist, verbose)
 
-    if isinstance(mc, dict): # allow: bind_all(globals())
+    if isinstance(mc, dict): # allow: optimize_namespace(globals())
         for k, v in list(mc.items()):
             if type(v) is FunctionType:
                 newv = _make_constants(v, builtin_only, stoplist,  verbose)

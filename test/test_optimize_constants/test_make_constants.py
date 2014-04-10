@@ -12,7 +12,8 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants, _getref
+from pysrc.snippets._ctypes_hax import _tuple_set_item, _getrefptr
+from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants
 import builtins
 
 
@@ -296,9 +297,6 @@ class TestMakeConstantsInOut(TestMakeConstantsCoConsts):
         self.check_co_consts(modified_env, exp_consts)
 
 
-from pysrc.snippets.optimize_constants import _tuple_set_item
-
-
 class TestHax(TestMakeConstantsCoConsts):
 
     def test_hack_tuple_recursive(self):
@@ -312,27 +310,40 @@ class TestHax(TestMakeConstantsCoConsts):
     def test_hack_tuple_memleak(self):
         # Make sure hack tuple doesn't leave memory leaks
 
-        from ctypes import c_uint64
         import gc
+        from pysrc.snippets._ctypes_hax import _Py_ssize_t
+
+        # Cast unsigned -1 to python int
+        rfc_expected = _Py_ssize_t(-1).value
 
         # XXX DO NOT CHANGE THIS!
         # If built using a tuple literal, tuple will be ref'd as a
         # code/frame constant and be off by 1 for the test.
-        mytuple = tuple([1, 2, 3])
+        # reference mytuple in a closure function to be sure
+        # that all refs are gone.
+        # also, DO NOT NOT MAKE ANY PYOBJECTS after running this!
+        # if a pyobject is made, it may be made at the address
+        # of mytuple, and throw off the resulting refcount.
 
-        rfc = c_uint64.from_address(id(mytuple))
+        def run_test():
+            mytuple = tuple([1, 2, 3])
 
-        self.assertTrue(gc.is_tracked(mytuple))
-        self.assertEqual(rfc.value, 1)
-        b = mytuple
-        self.assertEqual(rfc.value, 2)
-        del b
-        self.assertEqual(rfc.value, 1)
+            rfc = _getrefptr(mytuple)
 
-        _tuple_set_item(mytuple, 1, mytuple)
-        self.assertEqual(rfc.value, 1)
+            self.assertTrue(gc.is_tracked(mytuple))
+            self.assertEqual(rfc.value, 1)
+            b = mytuple
+            self.assertEqual(rfc.value, 2)
+            del b
+            self.assertEqual(rfc.value, 1)
 
-        del mytuple
+            _tuple_set_item(mytuple, 1, mytuple)
+            self.assertEqual(rfc.value, 1)
+
+            mytuple = None
+            del mytuple
+            return rfc
+        rfc = run_test()
 
         # Because tuples 'cannot' have references to themselves,
         # the tuple deallocator reduces refcount to -1 due to
@@ -340,8 +351,7 @@ class TestHax(TestMakeConstantsCoConsts):
         # its presense to keep an eye on the behavior of the code.
         # XXX Not sure if the above is actually true
 
-        self.assertEqual(rfc.value, 0xFFFFFFFFFFFFFFFF)  # 2**64 - 1
-
+        self.assertEqual(rfc.value, rfc_expected)
         gc.collect()  # if interpreter segfaults, the test failed :-)
 
     def test_dirwalk(self):
@@ -358,8 +368,7 @@ class TestHax(TestMakeConstantsCoConsts):
         dirwalk = make_constants(dirwalk=dirwalk)(dirwalk)
 
         dirwalk(curdir)
-
-        rc = _getref(dirwalk)
+        rc = _getrefptr(dirwalk)
 
         self.assertEqual(rc.value, 1)
 

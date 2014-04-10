@@ -12,8 +12,7 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-from weakref import ref
-import pysrc.snippets.optimize_constants as optimize_constants
+from pysrc.snippets._ctypes_hax import _func_hack_callback, _tuple_set_item
 
 __author__ = 'Administrator'
 
@@ -78,18 +77,21 @@ class TestHackCallback(unittest.TestCase):
 
         dummy_ref = DummyRef(tpl1, 1)
 
-        cache = optimize_constants._hack_cache
-        cache.add(dummy_ref)
-        self.assertIn(dummy_ref, optimize_constants._hack_cache)
+        from pysrc.snippets import _ctypes_hax
+        cache = _ctypes_hax._hack_cache
 
-        optimize_constants._hack_callback(dummy_ref)
+        cache.add(dummy_ref)
+        self.assertIn(dummy_ref, _ctypes_hax._hack_cache)
+
+        # noinspection PyTypeChecker
+        _func_hack_callback(dummy_ref)
 
         self.assertIs(tpl1[1], None)
         self.assertEqual(none_refs + 1, getref(None))
         self.assertEqual(getref(tpl1) - 1, rc)  # -1, frame object stores an extra reference
         self.assertEqual(getref(b), bref)
 
-        self.assertNotIn(dummy_ref, optimize_constants._hack_cache)
+        self.assertNotIn(dummy_ref, _ctypes_hax._hack_cache)
 
     def test_tuple_set_item(self):
         a = 'foo '.strip()
@@ -98,12 +100,10 @@ class TestHackCallback(unittest.TestCase):
 
         a_refs = getref(a)
         new_value_refs = getref(new_value)
-        optimize_constants._tuple_set_item(test_tuple, 1, new_value)
+        _tuple_set_item(test_tuple, 1, new_value)
 
         self.assertEqual(a_refs, getref(a))
         self.assertEqual(new_value_refs, getref(new_value))
-
-
 
 
 def tearDownModule():

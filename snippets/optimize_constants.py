@@ -10,146 +10,29 @@ __author__ = 'Nathan Starkweather'
 
 __all__ = [
             'make_constants',
-            'bind_all',
-            'ConstantOptimizingMeta'
+            'optimize_namespace',
+            'ConstantOptimizingMeta',
+            'ConstantGlobals',
+            'make_constants_class'
             ]
 
 from opcode import opmap, HAVE_ARGUMENT, EXTENDED_ARG, opname
+from types import FunctionType, CodeType, MethodType
+
+# hack methods
+from pysrc.snippets._ctypes_hax import _tuple_set_item, _add_function_hack
 
 LOAD_CONST = opmap['LOAD_CONST']
 STORE_GLOBAL = opmap['STORE_GLOBAL']
 LOAD_GLOBAL = opmap['LOAD_GLOBAL']
 GREATER_HAVE_ARG = HAVE_ARGUMENT + 1
 
-from types import FunctionType, CodeType, MethodType
 
 # The type constructors actually do the work, but
 # providing aliases here so that it is easier to read our code.
 _make_function = FunctionType
 _make_code = CodeType
 _make_method = MethodType
-
-# get pyssizet size at runtime by checking against
-# the arg parsing typecode.
-
-import ctypes as _ctypes
-from weakref import ref as _wref
-from ctypes import py_object as _py_object, pythonapi as _pythonapi
-from _ctypes import sizeof as _csizeof, Py_INCREF as _Py_INCREF
-from struct import calcsize as _calcsize
-
-_py_ssize_t_bytes = _calcsize('n')
-if _py_ssize_t_bytes == 8:
-    _Py_ssize_t = _ctypes.c_uint64
-elif _py_ssize_t_bytes == 4:
-    _Py_ssize_t = _ctypes.c_uint32
-else:
-    raise SystemError("size of _Py_ssize_t does not match known values")
-
-# _Py_ssize_t should be the same size as ssize_t, but unsigned
-
-if _csizeof(_ctypes.c_ssize_t) != _csizeof(_Py_ssize_t):
-    raise SystemError("Ambiguous ssize_t size")
-
-
-def _getref(ob):
-    return _Py_ssize_t.from_address(id(ob)).value
-
-
-_PyHack_SetItem = _pythonapi.PyStructSequence_SetItem
-
-
-# cache to store list of weak references. We need this so that
-# the weak ref object itself stays alive so that the callback can
-# be called. In Python 3.4 we can just use weakref.finalize instead.
-
-_hack_cache = set()
-
-
-def _hack_callback(hackref):
-    """
-
-    Execute the cleanup action by the function hack weakref.
-    Because the weakref callback can never be called until func's refcount
-    is 0, we should NOT call Py_DECREF on the target index, or even access it
-    to check, or we will segfault.
-
-    But, we can be reasonably sure that the refcount is zero, so we can
-     override that item. We don't have to worry about Py_DECREF being called
-     on an undefined object because of our shoice of function, but if the C API
-     implementation changed, we would.
-
-    @param hackref: _FuncHackRef
-    @type hackref: _FuncHackRef
-    """
-    # refcount of new_func should be 3:
-    # ref in calling function (1), ref as parameter here (2),
-    # and reference held by the frame object (3)
-    # func_rc = _Py_ssize_t.from_address(hackref.f_addr)
-
-    # Remove the reference from the cache!
-    _hack_cache.remove(hackref)
-    _Py_INCREF(None)
-    _tuple_set_item(hackref.f_const, hackref.f_index, None)
-
-
-class _FuncHackRef(_wref):
-
-    __slots__ = 'f_const', 'f_index', 'ref_cb', 'f_addr'
-
-    def __new__(cls, func, f_consts, f_index):
-
-        self = _wref.__new__(cls, func, _hack_callback)
-        self.ref_cb = _hack_callback
-        self.f_addr = id(func)
-        self.f_const = f_consts
-        self.f_index = f_index
-        return self
-
-    # noinspection PyUnusedLocal
-    def __init__(self, func, f_consts, f_index):
-        super().__init__(func, self.ref_cb)
-
-
-def _tuple_set_item(ob, i, newitem):
-    """
-
-    Python interface to CPython API function PyStructSequence_SetItem.
-    Handles conversion of arguments properly from python-space objects
-    to ctypes equivalents.
-
-    LIKE THE C API FUNCTION, DOES NOT INCREASE REF OF NEW ITEM.
-    UNLIKE C API FUNCTION, DOES NOT DECREASE REF OF OLD ITEM.
-
-    @param ob: tuple
-    @type ob: tuple
-    @param i: index
-    @type i: int
-    @param newitem: new item
-    @type newitem: T
-    @return:
-    @rtype:
-    """
-    # Set the ith item of sequence item ob to newitem
-    # using python capi exposed by _ctypes. While most python capi
-    # performs runtime type checking, we can use PyStructSequence_SetItem
-    # to arbitrarily set the item. Perform some checking here to make sure
-    # we don't screw everything up.
-
-    if type(ob) is not tuple:
-        raise TypeError("Refusing to hack non-tuple item.")
-
-    if i >= len(ob):
-        raise IndexError("Index out of range.")
-
-    pyob_ob = _py_object(ob)
-    pyob_newitem = _py_object(newitem)
-    pyob_i = _Py_ssize_t(i)
-
-    # Note: PyTuple_SetItem calls XDECREF on the previous item
-    # PyStructSequence_SetItem DOES NOT (which is what is used here)
-    #
-    _PyHack_SetItem(pyob_ob, pyob_i, pyob_newitem)
 
 
 def _hack_recursive_func(new_func, old_func):
@@ -170,7 +53,7 @@ def _hack_recursive_func(new_func, old_func):
     3) With function deleted, we now have a tuple with an invald reference,
     but we know which index contains that reference. Use capi again to
     quietly re-write the tuple index to contain Py_None, then delete
-    the local tuple reference. See _hack_callback for the function code
+    the local tuple reference. See _func_hack_callback for the function code
 
     @param new_func: new function
     @type new_func: FunctionType | MethodType
@@ -185,8 +68,7 @@ def _hack_recursive_func(new_func, old_func):
 
     # Hack the tuple to set up weakref callback scheme
     _tuple_set_item(co_consts, co_index, new_func)
-    hackref = _FuncHackRef(new_func, co_consts, co_index)
-    _hack_cache.add(hackref)
+    _add_function_hack(new_func, co_consts, co_index)
 
 
 def getarg(codestr, i):
@@ -204,7 +86,7 @@ def getarg(codestr, i):
     return oparg
 
 
-def _getops(codestr):
+def getops(codestr):
     """
 
     Scan codestring for all opcodes, returning list of
@@ -228,7 +110,7 @@ def _getops(codestr):
     return oplist
 
 
-def code_maker(co, newcode, newconsts):
+def _code_maker(co, newcode, newconsts):
     return _make_code(co.co_argcount, co.co_kwonlyargcount, co.co_nlocals,
                      co.co_stacksize, co.co_flags, bytes(newcode),
                      tuple(newconsts), co.co_names, co.co_varnames,
@@ -236,7 +118,7 @@ def code_maker(co, newcode, newconsts):
                      co.co_lnotab, co.co_freevars, co.co_cellvars)
 
 
-def function_maker(old_func, new_code):
+def _function_maker(old_func, new_code):
     return _make_function(new_code, old_func.__globals__, old_func.__name__, old_func.__defaults__, old_func.__closure__)
 
 
@@ -325,8 +207,8 @@ def _make_constant_globals(f, env, verbose=False):
     # Make code object from type of code in case there
     # is a difference between FunctionType, MethodType, etc
 
-    f_code = code_maker(co, newcode, newconsts)
-    new_func = function_maker(f, f_code)
+    f_code = _code_maker(co, newcode, newconsts)
+    new_func = _function_maker(f, f_code)
 
     if type(f) is MethodType:
         new_func = _make_method(new_func, f.__self__)
@@ -348,10 +230,15 @@ def _make_constant_globals(f, env, verbose=False):
 #========================================================================
 
 
-def make_constants(env=None, blacklist=None, verbose=False, **kwargs):
+def make_constants(env=None, blacklist=None, verbose=False, use_builtins=True, **kwargs):
     """
-    public interface to _make_constant_globals, for sake of accepting whitelist
-    in the form of kwargs
+
+    Function Decorator.
+
+    Public interface to _make_constant_globals. Use env=globals() to grab everything,
+    use blacklist to ban things. Pass arbitrary args to kwargs for convenience of not having
+    to make a new mapping for each dict.
+
     @param env: pass in a dict mapping names <=> values to override. Caller
                 responsible for ensuring that names map to the correct value.
     @type env: dict
@@ -361,8 +248,10 @@ def make_constants(env=None, blacklist=None, verbose=False, **kwargs):
     @return: make_constants function wrapper
     @rtype: types.FunctionType
     """
-
-    import builtins
+    if use_builtins:
+        import builtins
+    else:
+        builtins = {}  # dummy
 
     def constants_wrapper(f):
         """
@@ -406,7 +295,7 @@ def make_constants(env=None, blacklist=None, verbose=False, **kwargs):
     return constants_wrapper
 
 
-def bind_all(ns, env=None, blacklist=None, verbose=False, **kwargs):
+def optimize_namespace(ns, env=None, blacklist=None, verbose=False, use_builtins=True, **kwargs):
     """
     Bind all functions in a namespace using make_constants
     @param ns: namespace
@@ -416,7 +305,7 @@ def bind_all(ns, env=None, blacklist=None, verbose=False, **kwargs):
     """
 
     # use the same wrapper for all functions:
-    wrapper = make_constants(env, blacklist, verbose, **kwargs)
+    wrapper = make_constants(env, blacklist, verbose, use_builtins, **kwargs)
 
     # make sure dict is not modified during iteration!
     items = tuple(ns.items())
@@ -431,7 +320,8 @@ class ConstantOptimizingMeta(type):
         """
 
         Meta to optimize the class's functions to use constant
-        global lookups.
+        global lookups. Set a class attribute __env__ to add stuff
+        to namespace.
 
         @param mcs: metaclass
         @type mcs: T
@@ -445,8 +335,23 @@ class ConstantOptimizingMeta(type):
         @rtype: ConstantOptimizingMeta
         """
 
-        env = namespace.pop('__env__', None)
+        #: @type: dict
+        env = namespace.pop('__env__', {})
         if env is not None:
-            pass  # Todo
-        else:
-            return type.__new__(mcs, name, bases, namespace)
+            optimize_namespace(namespace, env)
+        return type.__new__(mcs, name, bases, namespace)
+
+
+class ConstantGlobals(metaclass=ConstantOptimizingMeta):
+    """ Get optimizing behavior by superclass instead of metaclass. """
+    pass
+
+
+def make_constants_class(env=None, blacklist=None, verbose=False, use_builtins=True, **kwargs):
+    """
+    Class decorator for binding stuff.
+    """
+    def class_wrapper(cls):
+        optimize_namespace(cls.__dict__, env, blacklist, verbose, use_builtins, **kwargs)
+        return cls
+    return class_wrapper
