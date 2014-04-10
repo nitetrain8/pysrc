@@ -8,6 +8,12 @@ Created in: PyCharm Community Edition
 """
 __author__ = 'Nathan Starkweather'
 
+__all__ = [
+            'make_constants',
+            'bind_all',
+            'ConstantOptimizingMeta'
+            ]
+
 from opcode import opmap, HAVE_ARGUMENT, EXTENDED_ARG, opname
 
 LOAD_CONST = opmap['LOAD_CONST']
@@ -19,9 +25,9 @@ from types import FunctionType, CodeType, MethodType
 
 # The type constructors actually do the work, but
 # providing aliases here so that it is easier to read our code.
-make_function = FunctionType
-make_code = CodeType
-make_method = MethodType
+_make_function = FunctionType
+_make_code = CodeType
+_make_method = MethodType
 
 # get pyssizet size at runtime by checking against
 # the arg parsing typecode.
@@ -223,7 +229,7 @@ def _getops(codestr):
 
 
 def code_maker(co, newcode, newconsts):
-    return make_code(co.co_argcount, co.co_kwonlyargcount, co.co_nlocals,
+    return _make_code(co.co_argcount, co.co_kwonlyargcount, co.co_nlocals,
                      co.co_stacksize, co.co_flags, bytes(newcode),
                      tuple(newconsts), co.co_names, co.co_varnames,
                      co.co_filename, co.co_name, co.co_firstlineno,
@@ -231,7 +237,7 @@ def code_maker(co, newcode, newconsts):
 
 
 def function_maker(old_func, new_code):
-    return make_function(new_code, old_func.__globals__, old_func.__name__, old_func.__defaults__, old_func.__closure__)
+    return _make_function(new_code, old_func.__globals__, old_func.__name__, old_func.__defaults__, old_func.__closure__)
 
 
 def _make_constant_globals(f, env, verbose=False):
@@ -250,6 +256,7 @@ def _make_constant_globals(f, env, verbose=False):
     mod = getattr(f, '__module__', 'None')
     name = f.__qualname__
     func_repr = "<%s.%s>" % (mod, name)
+    ob_repr = object.__repr__
 
     if verbose:
         print("Attempting to optimize %s." % func_repr)
@@ -270,7 +277,7 @@ def _make_constant_globals(f, env, verbose=False):
 
         if op in (EXTENDED_ARG, STORE_GLOBAL):
             # todo: store-global can be worked around with a double pass to pop offenders from env
-            # todo: Extended arg: get oparg, shift << 16, i += 3, add oparg to NEXT oparg value of NEXT op
+            # todo: Extended arg: get oparg, shift << 16, i += 3, add oparg to NEXT oparg value of NEXT op, see inspect module
             return f
 
         if op == LOAD_GLOBAL:
@@ -278,7 +285,8 @@ def _make_constant_globals(f, env, verbose=False):
             # Each oparg is an unsigned byte in range (0, 255).
             # If the size of co_consts is > 255, overflow would be stored
             # in newcode[i + 2] (or more, with EXTENDED_ARG).
-            # Bit shift (0 << 8 == 0) and add together.
+            # Bit shift and add together.
+            # See ceval.c or inspect module for OPARG math
 
             oparg = newcode[i + 1] + (newcode[i + 2] << 8)
             name = co_names[oparg]
@@ -294,8 +302,12 @@ def _make_constant_globals(f, env, verbose=False):
                     pos = len(newconsts)
                     newconsts_append(value)
 
+                    if verbose:
+                        print("Making new constant %s for function %s" % (ob_repr(value), func_repr))
+
                 # Bitwise & 0xff, shift >> 8: bytes have max capacity of 255
                 # use bit twiddling to store multibyte int into two bytes.
+                # See ceval.c or inspect module for OPARG math.
 
                 newcode[i] = LOAD_CONST
                 newcode[i + 1] = pos & 0xff
@@ -317,7 +329,7 @@ def _make_constant_globals(f, env, verbose=False):
     new_func = function_maker(f, f_code)
 
     if type(f) is MethodType:
-        new_func = make_method(new_func, f.__self__)
+        new_func = _make_method(new_func, f.__self__)
 
     if f in new_func.__code__.co_consts:
         if verbose:
@@ -329,6 +341,11 @@ def _make_constant_globals(f, env, verbose=False):
         print("Returning improved function %s" % func_repr)
 
     return new_func
+
+
+#========================================================================
+# Binding functions
+#========================================================================
 
 
 def make_constants(env=None, blacklist=None, verbose=False, **kwargs):
@@ -398,18 +415,38 @@ def bind_all(ns, env=None, blacklist=None, verbose=False, **kwargs):
     @rtype: None
     """
 
-    Function = FunctionType
-    Method = MethodType
-
     # use the same wrapper for all functions:
     wrapper = make_constants(env, blacklist, verbose, **kwargs)
 
     # make sure dict is not modified during iteration!
-    items = tuple(ns.items)
+    items = tuple(ns.items())
 
     for k, v in items:
-        if type(v) is Function:
+        if type(v) in (FunctionType, MethodType):
             ns[k] = wrapper(v)
 
 
+class ConstantOptimizingMeta(type):
+    def __new__(mcs, name, bases, namespace):
+        """
 
+        Meta to optimize the class's functions to use constant
+        global lookups.
+
+        @param mcs: metaclass
+        @type mcs: T
+        @param name: class name
+        @type name: str
+        @param bases: bases tuple
+        @type bases: tuple
+        @param namespace: namespace
+        @type namespace: dict
+        @return: type
+        @rtype: ConstantOptimizingMeta
+        """
+
+        env = namespace.pop('__env__', None)
+        if env is not None:
+            pass  # Todo
+        else:
+            return type.__new__(mcs, name, bases, namespace)
