@@ -20,7 +20,7 @@ from opcode import opmap, HAVE_ARGUMENT, EXTENDED_ARG, opname
 from types import FunctionType, CodeType, MethodType
 
 # hack methods
-from pysrc.snippets._ctypes_hax import _tuple_set_item, _add_function_hack
+from ._ctypes_hax import _tuple_set_item, _add_function_hack
 
 LOAD_CONST = opmap['LOAD_CONST']
 STORE_GLOBAL = opmap['STORE_GLOBAL']

@@ -12,9 +12,10 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-from pysrc.snippets._ctypes_hax import _tuple_set_item, _getrefptr
-from pysrc.snippets.optimize_constants import _make_constant_globals, make_constants
 import builtins
+
+from pysrc.optimize._ctypes_hax import _tuple_set_item, getrefptr
+from pysrc.optimize.optimize_constants import _make_constant_globals, make_constants
 
 
 __author__ = 'Administrator'
@@ -311,7 +312,7 @@ class TestHax(TestMakeConstantsCoConsts):
         # Make sure hack tuple doesn't leave memory leaks
 
         import gc
-        from pysrc.snippets._ctypes_hax import _Py_ssize_t
+        from pysrc.optimize._ctypes_hax import _Py_ssize_t
 
         # Cast unsigned -1 to python int
         rfc_expected = _Py_ssize_t(-1).value
@@ -328,7 +329,7 @@ class TestHax(TestMakeConstantsCoConsts):
         def run_test():
             mytuple = tuple([1, 2, 3])
 
-            rfc = _getrefptr(mytuple)
+            rfc = getrefptr(mytuple)
 
             self.assertTrue(gc.is_tracked(mytuple))
             self.assertEqual(rfc.value, 1)
@@ -368,7 +369,7 @@ class TestHax(TestMakeConstantsCoConsts):
         dirwalk = make_constants(dirwalk=dirwalk)(dirwalk)
 
         dirwalk(curdir)
-        rc = _getrefptr(dirwalk)
+        rc = getrefptr(dirwalk)
 
         self.assertEqual(rc.value, 1)
 

@@ -193,9 +193,9 @@ def _add_function_hack(f, f_tuple, f_index):
 # Misc Utility funcs
 # =====================================================
 
-def _getref(ob):
+def getref(ob):
     return _Py_ssize_t.from_address(id(ob)).value
 
 
-def _getrefptr(ob):
+def getrefptr(ob):
     return _Py_ssize_t.from_address(id(ob))
