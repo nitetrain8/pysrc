@@ -381,6 +381,35 @@ class TestHax(TestMakeConstantsCoConsts):
         self.assertEqual(rc.value, 0)
 
 
+class TestBindNamespace(unittest.TestCase):
+    def test_blacklist(self):
+        """
+        """
+        src = """def inner():
+    return "hello world"
+
+def foo():
+    return inner()
+def bar():
+    return inner()
+"""
+        ns = {}
+        exec(src, ns, ns)
+        inner = ns['inner']
+
+        from pysrc.optimize import optimize_namespace
+
+        def inner2():
+            return 'bye world'
+
+        self.assertEqual(ns['foo'](), 'hello world')
+        ns['inner'] = inner2
+        self.assertEqual(ns['foo'](), 'bye world')
+        ns['inner'] = inner
+
+        optimize_namespace(ns, ns)
+
+
 def tearDownModule():
     """
     @return: None

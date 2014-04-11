@@ -141,7 +141,8 @@ def _make_constant_globals(f, env, verbose=False):
     ob_repr = object.__repr__
 
     if verbose:
-        print("Attempting to optimize %s." % func_repr)
+        print()
+        print("Attempting to optimize %s..." % func_repr)
 
     co = f.__code__
     newcode = list(co.co_code)
@@ -160,6 +161,7 @@ def _make_constant_globals(f, env, verbose=False):
         if op in (EXTENDED_ARG, STORE_GLOBAL):
             # todo: store-global can be worked around with a double pass to pop offenders from env
             # todo: Extended arg: get oparg, shift << 16, i += 3, add oparg to NEXT oparg value of NEXT op, see inspect module
+            print("Can't modify function with EXTENDED_ARG or STORE_GLOBAL opcodes.\n")
             return f
 
         if op == LOAD_GLOBAL:
@@ -185,7 +187,13 @@ def _make_constant_globals(f, env, verbose=False):
                     newconsts_append(value)
 
                     if verbose:
-                        print("Making new constant %s for function %s" % (ob_repr(value), func_repr))
+                        if isinstance(value, type):
+                            # class
+                            _repr = type.__repr__
+                        else:
+                            _repr = ob_repr
+                        print("  Making new constant!")
+                        print("'   '", name, _repr(value))
 
                 # Bitwise & 0xff, shift >> 8: bytes have max capacity of 255
                 # use bit twiddling to store multibyte int into two bytes.
@@ -220,7 +228,7 @@ def _make_constant_globals(f, env, verbose=False):
         _hack_recursive_func(new_func, f)
 
     if verbose:
-        print("Returning improved function %s" % func_repr)
+        print("Returning improved function", func_repr, '\n')
 
     return new_func
 
@@ -297,7 +305,10 @@ def make_constants(env=None, blacklist=None, verbose=False, use_builtins=True, *
 
 def optimize_namespace(ns, env=None, blacklist=None, verbose=False, use_builtins=True, **kwargs):
     """
-    Bind all functions in a namespace using make_constants
+    Bind all functions in a namespace using make_constants.
+
+    Must pass in namespace twice to explicitly optimize namespace
+    according to its own contents.
     @param ns: namespace
     @type ns: dict
     @return: None (mutate in place)
