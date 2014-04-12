@@ -467,6 +467,31 @@ a = 'hello world'
         self.assertEqual(foo(), len('bye world'))
 
 
+class TestMiscBugs(unittest.TestCase):
+    def test_kw_defaults(self):
+        """ There was some bug I found where running a function
+        with kw-only defaults (scripts.old_cli.plot) through the
+        make_constants function resulted in a "keyword only arg
+        requires argument" error upon calling the function without
+        explicitly specifying the error.
+        """
+
+        src = """
+def func(*, kwarg="hello world"):
+    print(kwarg)
+"""
+        ns = {}
+        exec(src, ns, ns)
+
+        func = ns['func']
+        func()
+
+        after = _make_constant_globals(func, {'print' : print})
+        after()
+
+
+
+
 def tearDownModule():
     """
     @return: None
