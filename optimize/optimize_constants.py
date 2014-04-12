@@ -161,7 +161,8 @@ def _make_constant_globals(f, env, verbose=False):
         if op in (EXTENDED_ARG, STORE_GLOBAL):
             # todo: store-global can be worked around with a double pass to pop offenders from env
             # todo: Extended arg: get oparg, shift << 16, i += 3, add oparg to NEXT oparg value of NEXT op, see inspect module
-            print("Can't modify function with EXTENDED_ARG or STORE_GLOBAL opcodes.\n")
+            if verbose:
+                print("Can't modify function with EXTENDED_ARG or STORE_GLOBAL opcodes.\n")
             return f
 
         if op == LOAD_GLOBAL:
@@ -192,8 +193,7 @@ def _make_constant_globals(f, env, verbose=False):
                             _repr = type.__repr__
                         else:
                             _repr = ob_repr
-                        print("  Making new constant!")
-                        print("'   '", name, _repr(value))
+                        print("  Replacing global lookup:", name, ":", _repr(value))
 
                 # Bitwise & 0xff, shift >> 8: bytes have max capacity of 255
                 # use bit twiddling to store multibyte int into two bytes.
@@ -217,6 +217,8 @@ def _make_constant_globals(f, env, verbose=False):
 
     f_code = _code_maker(co, newcode, newconsts)
     new_func = _function_maker(f, f_code)
+
+    new_func.__kwdefaults__ = f.__kwdefaults__
 
     if type(f) is MethodType:
         new_func = _make_method(new_func, f.__self__)
@@ -247,10 +249,14 @@ def make_constants(env=None, blacklist=None, verbose=False, use_builtins=True, *
     use blacklist to ban things. Pass arbitrary args to kwargs for convenience of not having
     to make a new mapping for each dict.
 
+    Requires _explicit whitelist_, in the form of env/kwargs, except that it will use builtins
+    by default. If optimizing a local namespace, pass globals() to env.
+
+
     @param env: pass in a dict mapping names <=> values to override. Caller
                 responsible for ensuring that names map to the correct value.
     @type env: dict
-    @type blacklist: dict | None
+    @type blacklist: collections.Iterable[str] | None
     @type verbose: bool
     @param kwargs:
     @return: make_constants function wrapper
@@ -258,8 +264,23 @@ def make_constants(env=None, blacklist=None, verbose=False, use_builtins=True, *
     """
     if use_builtins:
         import builtins
+        all_env = vars(builtins).copy()
     else:
-        builtins = {}  # dummy
+        all_env = {}
+
+    if env:
+        all_env.update(env)
+    if kwargs:
+        all_env.update(kwargs)
+
+    if blacklist:
+        for key in blacklist:
+            try:
+                del all_env[key]
+                if verbose:
+                    print("Removing %s from env." % key)
+            except KeyError:
+                pass
 
     def constants_wrapper(f):
         """
@@ -272,33 +293,12 @@ def make_constants(env=None, blacklist=None, verbose=False, use_builtins=True, *
         # most important last -> overrides earlier
         # first, default global values
 
-        real_env = vars(builtins).copy()
-        real_env.update(f.__globals__)
-
         # update user specified, and discard from blacklist
         # update kwargs with env has same effect as updating
         # real env with kwargs then env, but makes it easier
         # to error check vs blacklist
 
-        if env is not None:
-            kwargs.update(env)
-
-        real_env.update(kwargs)
-
-        if blacklist is not None:
-            for key in blacklist:
-                try:
-                    if real_env[key] == blacklist[key]:
-                        del real_env[key]
-                        if verbose:
-                            print("Removing %s from env for function <%s>" % (key, f.__name__))
-                    else:
-                        raise ValueError("Environment mapping {%r : %r} != blacklist mapping {%r : %r}"
-                                         % (key, real_env[key], key, blacklist[key]))
-                except KeyError:
-                    pass
-
-        return _make_constant_globals(f, real_env, verbose)
+        return _make_constant_globals(f, all_env, verbose)
 
     return constants_wrapper
 
@@ -348,8 +348,7 @@ class ConstantOptimizingMeta(type):
 
         #: @type: dict
         env = namespace.pop('__env__', {})
-        if env is not None:
-            optimize_namespace(namespace, env)
+        optimize_namespace(namespace, env)
         return type.__new__(mcs, name, bases, namespace)
 
 

@@ -283,12 +283,11 @@ class TestMakeConstantsInOut(TestMakeConstantsCoConsts):
         # modify the function. While we're here, pass in a bad namespace
         # to test blacklist
 
-        bad_blacklist = {'hd' : 'bobcat'}
+        # bad_blacklist = {'hd' : 'bobcat'}
+        # bad_wrapper = make_constants(ns, bad_blacklist)
+        # self.assertRaises(ValueError, bad_wrapper, est_env)
 
-        bad_wrapper = make_constants(ns, bad_blacklist)
-        self.assertRaises(ValueError, bad_wrapper, est_env)
-
-        modified_env = make_constants(ns, None, True)(est_env)
+        modified_env = make_constants(ns, None)(est_env)
         result2 = [modified_env(x) for x in x_values]
 
         for res, exp in zip(result2, y_values):
@@ -385,29 +384,87 @@ class TestBindNamespace(unittest.TestCase):
     def test_blacklist(self):
         """
         """
-        src = """def inner():
+        src = """
+def inner1():
     return "hello world"
 
+def inner2():
+    return "hello world2"
+
 def foo():
-    return inner()
+    return inner1()
 def bar():
-    return inner()
+    return inner2()
 """
         ns = {}
         exec(src, ns, ns)
-        inner = ns['inner']
+        inner1 = ns['inner1']
+
+        def inner3():
+            return 'bye world'
+
+        def inner4():
+            return 'bye world2'
+
+        # make sure test setup works
+        self.assertEqual(ns['foo'](), 'hello world')
+        ns['inner1'] = inner3
+        self.assertEqual(ns['foo'](), 'bye world')
+        ns['inner1'] = inner1
 
         from pysrc.optimize import optimize_namespace
 
-        def inner2():
-            return 'bye world'
+        optimize_namespace(ns, ns, ('inner1',))
 
-        self.assertEqual(ns['foo'](), 'hello world')
-        ns['inner'] = inner2
+        self.assertEqual(ns['foo'](), "hello world")
+        self.assertEqual(ns['bar'](), 'hello world2')
+
+        ns['inner1'] = inner3
+        ns['inner2'] = inner4
+
         self.assertEqual(ns['foo'](), 'bye world')
-        ns['inner'] = inner
+        self.assertEqual(ns['bar'](), 'hello world2')
 
-        optimize_namespace(ns, ns)
+
+class TestMiscBugs(unittest.TestCase):
+
+    # @unittest.expectedFailure
+    def test_kwdefaults(self):
+
+        src = """
+def foo(*, kw='hello'):
+    return len(kw)
+"""
+        ns = {}
+        exec(src, ns, ns)
+        foo = ns['foo']
+
+        # call kw default
+        self.assertEqual(foo(), 5)
+
+        foo2 = make_constants()(foo)
+
+        # kw defaults should still work
+        self.assertEqual(foo2(), 5)
+
+    def test_no_args(self):
+        """ when called with no args, make constants should
+        optimize builtins only.
+        """
+        src = """
+@make_constants()
+def foo():
+    return len(a)
+
+a = 'hello world'
+"""
+        ns = {'make_constants' : make_constants}
+        exec(src, ns, ns)
+
+        foo = ns['foo']
+        self.assertEqual(foo(), len('hello world'))
+        ns['a'] = 'bye world'
+        self.assertEqual(foo(), len('bye world'))
 
 
 def tearDownModule():
