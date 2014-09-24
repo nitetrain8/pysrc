@@ -20,6 +20,7 @@ pfc_ignore = [
 
 def pfc(func):
 
+    # avoid wrapping self
     if func.__name__ in pfc_ignore:
         return func
 
@@ -36,12 +37,12 @@ def pfc(func):
 
 def __commit_log():
 
-    bufval = __pfc_iobuffer.getvalue()
-    if not bufval:
+    bv = __pfc_iobuffer.getvalue()
+    if not bv:
         return
 
     with open(logfile, 'w') as f:
-        f.write(bufval)
+        f.write(bv)
 
 atexit.register(__commit_log)
 
