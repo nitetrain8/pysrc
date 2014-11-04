@@ -288,3 +288,47 @@ def OverloadWarning(cls: type, ignore: list=ovl_ignore_list) -> type:
                                 attr))
 
     return cls
+
+
+class pfc_meta(type):
+
+    level = 0
+
+    def __new__(mcs, name, bases, kwargs):
+        from types import FunctionType
+
+        # local kwargs
+        for k, v in kwargs.items():
+            if isinstance(v, FunctionType):
+               kwargs[k] = mcs.pfc(v)
+
+        return type.__new__(mcs, name, bases, kwargs)
+
+    @classmethod
+    def pfc(mcs, f):
+        from functools import wraps
+        if hasattr(f, "_ispfcwrapper_"):
+            return f
+        name = f.__qualname__
+        print("Creating PFC wrapper for", name)
+
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            print(mcs.level * " ", "<%s> Called with %d args, %d keyword args" %
+                  (name, len(args), len(kwargs)), sep='')
+            mcs.level += 1
+            rv = f(*args, **kwargs)
+            mcs.level -= 1
+            print(mcs.level * " ", "<%s> Returned" % name, sep='')
+            return rv
+
+        wrapper._ispfcwrapper_ = True
+        return wrapper
+
+    @classmethod
+    def wrap_cls(mcs, cls):
+        from types import FunctionType
+        for k, v in vars(cls).items():
+            if isinstance(v, FunctionType):
+                setattr(cls, k, mcs.pfc(v))
+        return cls
