@@ -302,22 +302,34 @@ class pfc_meta(type):
             if isinstance(v, FunctionType):
                kwargs[k] = mcs.pfc(v)
 
+        for b in bases:
+            for c in b.__mro__:
+                if c is object:
+                    continue
+                for attr in dir(b):
+                    val = getattr(b, attr, None)
+                    if isinstance(val, FunctionType) and attr not in kwargs:
+                        kwargs[attr] = mcs.pfc(val)
+
         return type.__new__(mcs, name, bases, kwargs)
 
     @classmethod
     def pfc(mcs, f):
-        from functools import wraps
         if hasattr(f, "_ispfcwrapper_"):
             return f
+        from functools import wraps
         name = f.__qualname__
         print("Creating PFC wrapper for", name)
 
         @wraps(f)
-        def wrapper(*args, **kwargs):
-            print(mcs.level * " ", "<%s> Called with %d args, %d keyword args" %
-                  (name, len(args), len(kwargs)), sep='')
+        def wrapper(self, *args, **kwargs):
+            if args or kwargs:
+                print(mcs.level * " ", "<%s> Called with %d args, %d keyword args" %
+                      (name, len(args), len(kwargs)), sep='')
+            else:
+                print(mcs.level * " ", "<%s> Called with no args." % name)
             mcs.level += 1
-            rv = f(*args, **kwargs)
+            rv = f(self, *args, **kwargs)
             mcs.level -= 1
             print(mcs.level * " ", "<%s> Returned" % name, sep='')
             return rv
