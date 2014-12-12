@@ -319,7 +319,7 @@ class pfc_meta(type):
             return f
         from functools import wraps
         name = f.__qualname__
-        print("Creating PFC wrapper for", name)
+        # print("Creating PFC wrapper for", name)
 
         @wraps(f)
         def wrapper(self, *args, **kwargs):
