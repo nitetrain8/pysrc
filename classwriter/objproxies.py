@@ -153,9 +153,9 @@ class ArgsProxy():
             # Outer while loop only exists as a goto substitute
             # first for loop loops through whole arg_list for malformed args
             # inner for loop scans for ')' match to broken arg
-            # if found, loop needs to entirely reset because we modified the list
+            # if found, loop needs to entirely _internal_reset because we modified the list
             # significantly while iterating, but we have to break out of two loops
-            # so raise StopIteration to signal the outer for loop to break and reset.
+            # so raise StopIteration to signal the outer for loop to break and _internal_reset.
             # If fix is not found, raise a ProxyError.
             # if we never find anything to fix, the outer for loop breaks out of the while.
             # This would be much cleaner with a single goto from 'raise StopIteration' to just

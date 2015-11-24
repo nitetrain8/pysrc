@@ -275,7 +275,7 @@ class PyQtGuiCompiler(_GuiCompiler):
         indenter.dedent()
 
         # Make a copy of the resource modules to import because the parser will
-        # reset() before returning.
+        # _internal_reset() before returning.
         self._resources = self.resources
 
     # hook/unhook UICompiler's createConnections
