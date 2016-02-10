@@ -176,6 +176,15 @@ class PLogger(Logger):
 import logging
 
 
+class REPLFormatter(logging.Formatter):
+    """ Formatter subclass for fixing messages that use
+     "\r" to re-display current line in dual console-logging
+     output scenarios (ie, BuiltinLogger)
+    """
+    def formatMessage(self, record):
+        return super().formatMessage(record).replace("\r", "\n")
+
+
 class BuiltinLogger(logging.Logger):
     _docroot = "C:\\.replcache\\log\\"
 
@@ -187,12 +196,16 @@ class BuiltinLogger(logging.Logger):
 
         h1 = logging.StreamHandler(sys.stderr)
         h2 = logging.FileHandler(os.path.join(path, name + ".log"))
-        f = logging.Formatter("%(asctime)s %(levelname)s <%(funcName)s>: %(message)s",
+        f1 = logging.Formatter("%(asctime)s %(levelname)s <%(funcName)s>: %(message)s",
                               logging.Formatter.default_time_format)
+        f2 = REPLFormatter("%(asctime)s %(levelname)s <%(funcName)s>: %(message)s",
+                               logging.Formatter.default_time_format)
 
         for h in (h1, h2):
             self.addHandler(h)
             h.setLevel(level)
-            h.setFormatter(f)
+
+        h1.setFormatter(f2)
+        h2.setFormatter(f1)
 
 
