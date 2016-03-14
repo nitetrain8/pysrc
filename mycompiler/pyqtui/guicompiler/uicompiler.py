@@ -258,18 +258,18 @@ class PyQtGuiCompiler(_GuiCompiler):
         """
         indenter = getIndenter()
         indenter.level = 1
-        indenter.write("")
-        indenter.write("# noinspection PyTypeChecker")
-        indenter.write("def retranslateUi(self, %s):" % self.toplevelWidget)
+        indenter.submit("")
+        indenter.submit("# noinspection PyTypeChecker")
+        indenter.submit("def retranslateUi(self, %s):" % self.toplevelWidget)
 
         indenter.indent()
 
         if qtproxies.i18n_strings:
-            indenter.write("_translate = QtCore.QCoreApplication.translate")
+            indenter.submit("_translate = QtCore.QCoreApplication.translate")
             for s in qtproxies.i18n_strings:
-                indenter.write(s)
+                indenter.submit(s)
         else:
-            indenter.write("pass")
+            indenter.submit("pass")
 
         indenter.dedent()
         indenter.dedent()
@@ -308,12 +308,12 @@ class PyQtGuiCompiler(_GuiCompiler):
         indenter = getIndenter()
         indenter.level = 0
 
-        indenter.write(self.view_import_def)
-        indenter.write("")
+        indenter.submit(self.view_import_def)
+        indenter.submit("")
 
-        indenter.write(self.ui_cls_name_def % "IDE")
+        indenter.submit(self.ui_cls_name_def % "IDE")
         indenter.indent()
-        indenter.write(self.setup_ui_def % widgetname)
+        indenter.submit(self.setup_ui_def % widgetname)
         indenter.indent()
         w = self.factory.createQObject(classname, widgetname, (),
                                        is_attribute=False,

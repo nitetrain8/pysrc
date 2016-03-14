@@ -262,7 +262,7 @@ class ClassWriter():
         # print(code)
         # debug debug debug
 
-        outfile.write(code)
+        outfile.submit(code)
 
     def reset(self):
         """

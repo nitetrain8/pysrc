@@ -30,7 +30,7 @@ def pfc(func):
     def pfc_wrapper(*args, **kwargs):
         nonlocal buf
         print(__pfcmsg)
-        buf.write(__pfcmsg)
+        buf.submit(__pfcmsg)
         return func(*args, **kwargs)
     return pfc_wrapper
 
