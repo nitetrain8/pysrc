@@ -10,6 +10,7 @@ __author__ = 'Nathan Starkweather'
 
 import tkinter as tk
 import tkinter.ttk as ttk
+
 from pysrc import logger
 
 _logger = logger.BuiltinLogger(__name__)

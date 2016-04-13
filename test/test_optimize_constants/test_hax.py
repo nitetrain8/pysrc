@@ -12,6 +12,7 @@ import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
+
 from pysrc.optimize import _ctypes_hax
 from pysrc.optimize._ctypes_hax import _func_hack_callback, _tuple_set_item
 

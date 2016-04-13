@@ -4,8 +4,6 @@ __author__ = 'Administrator'
 from pysrc.food_stuff.food_db import db_write_header, db_init_foods, get_foods_csv, load_raw_csv, assert_pynames, \
     name_to_pyname_repl, name_to_pyname, __save_bkup_cache, build_field_map, build_food_objects
 
-from pysrc.food_stuff.food import Food
-
 # reference to module for various reasons including __dict__ access
 from pysrc.food_stuff import food_db
 

@@ -8,15 +8,14 @@ Module: test_module
 Functions: test_functions
 
 """
+import builtins
 import unittest
 from os import makedirs
 from os.path import dirname, join, exists
 from shutil import rmtree
-import builtins
 
 from pysrc.optimize._ctypes_hax import _tuple_set_item, getrefptr
 from pysrc.optimize.optimize_constants import _make_constant_globals, make_constants
-
 
 __author__ = 'Administrator'
 
