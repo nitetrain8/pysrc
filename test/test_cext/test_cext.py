@@ -93,13 +93,14 @@ def test_CType_dtor():
 
 def test_make_stub():
     filepath = "C:/.replcache/stub.c"
-    cext.make_type_stub(filepath, 'MyType')
+    s = cext.empty_type_stub('MyType')
+    print(s)
     # show(filepath)
 
 
 def test_type_slots():
-    ts = cext.type_slots
-    tps = cext.slots
+    ts = cext.slot_names
+    tps = cext.all_slots
     it = itertools.zip_longest(ts, tps, fillvalue=None)
     for i, (n1, (t, n2)) in enumerate(it):
         assert n1 == n2
