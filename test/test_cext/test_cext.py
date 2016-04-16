@@ -91,11 +91,30 @@ def test_CType_dtor():
 # def
 
 
-def test_make_stub():
-    filepath = "C:/.replcache/stub.c"
-    s = cext.empty_type_stub('MyType')
-    print(s)
-    # show(filepath)
+# def test_make_stub():
+#     filepath = "C:/.replcache/stub.c"
+#     s = cext.empty_type_stub('MyType')
+#     print(s)
+#     # show(filepath)
+
+from python.cext import parse
+
+
+# def test_tokenize_str():
+#     pth = "C:\\Users\\Administrator\\Documents\\pyprojects\\python\\scripts\\toys\\empty.c"
+#     with open(pth, 'r') as f:
+#         src = f.read()
+#     toks = parse.tokenize(src)
+#     for t in toks:
+#         pass
+
+def test_parse_type_str():
+    pts = parse.parse_type_str
+    print(pts("const char *"))
+    print(pts("long long int"))
+    print(pts("struct foobar;"))
+    print(pts("FILE *bar;"))
+
 
 
 def test_type_slots():
