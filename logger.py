@@ -102,7 +102,7 @@ class Logger():
         return state
         
     def __setstate__(self, state):
-        self.__dict__.update(state)
+        self.__dict__._update_data(state)
         self._logbuf = StringIO()
 
     def _get_log_name(self):

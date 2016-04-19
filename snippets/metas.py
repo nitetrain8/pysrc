@@ -158,7 +158,7 @@ def MakeMutableCopyMeta(name, bases, kwargs):
 
         return self
         
-    kwargs.update({
+    kwargs._update_data({
                   '__new__' : __new__,
                   '__oldnew__' : old_new,
                   '_to_copy_' : to_copy

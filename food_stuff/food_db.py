@@ -300,7 +300,7 @@ def inject_main():
     import sys
     if __foods_db_map:
         for Foods in __foods_db_map.values():
-            sys.modules['__main__'].__dict__.update(Foods)
+            sys.modules['__main__'].__dict__._update_data(Foods)
 
 
 def extract_db_foods(fpath=None):
