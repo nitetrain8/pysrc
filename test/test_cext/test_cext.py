@@ -44,6 +44,7 @@ def setup_module():
     set_up_pyfile_logger()
     sys.path.append(curdir)
     sys.path.append(local_test_input)
+    print()
 
 
 def set_up_pyfile_logger():
@@ -77,12 +78,12 @@ def show(fp):
     subprocess.Popen("\"C:/program files (x86)/notepad++/notepad++.exe\" \"%s\"" % fp)
 
 
-def test_CType_dtor():
+def test_CType_funcstub():
     i = c_types.CType('foo')
-    mytype_del = c_types.CFunc(c_types.destructor, 'MyType_del')
+    mytype_del = c_types.destructor('MyType_del')
     print()
     print(mytype_del.to_string())
-    mytype_printfunc = c_types.CFunc(c_types.printfunc, "MyType_print")
+    mytype_printfunc = c_types.printfunc("MyType_print")
     print(mytype_printfunc.to_string())
     mytype_getattrfunc = c_types.CFunc(c_types.getattrfunc, "MyType_getattr")
     print(mytype_getattrfunc.to_string())
@@ -91,11 +92,11 @@ def test_CType_dtor():
 # def
 
 
-# def test_make_stub():
-#     filepath = "C:/.replcache/stub.c"
-#     s = cext.empty_type_stub('MyType')
-#     print(s)
-#     # show(filepath)
+def test_make_stub():
+    filepath = "C:/.replcache/stub.c"
+    t, s = cext.empty_type_stub('MyType')
+    print(s)
+    # show(filepath)
 
 from python.cext import parse
 
@@ -123,6 +124,8 @@ def test_type_slots():
     it = itertools.zip_longest(ts, tps, fillvalue=None)
     for i, (n1, (t, n2)) in enumerate(it):
         assert n1 == n2
+
+
 
 
 if __name__ == '__main__':
