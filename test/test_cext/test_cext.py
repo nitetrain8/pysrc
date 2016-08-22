@@ -70,6 +70,7 @@ def teardown_module():
 
 from python import cext
 from python.cext import c_types
+from python.cext.c_types import *
 import itertools
 
 
@@ -89,13 +90,17 @@ def test_CType_funcstub():
     print(mytype_getattrfunc.to_string())
 
 
-# def
-
-
 def test_make_stub():
     filepath = "C:/.replcache/stub.c"
-    t, s = cext.empty_type_stub('MyType')
+    mytype = typedef(CStruct("MyType", False, False, *[
+        ('foo', c_int),
+        ('bar', PyObject_p),
+        ('baz', CFunc.fn(PyObject_p, "baz", None, PyObject_p("self"), PyObject_p("i"), c_int))
+    ]), "MyType")
+    mytype2 = PyTypeObject()
+    t, s = cext.empty_type_stub(mytype2)
     print(s)
+    print(t)
     # show(filepath)
 
 from python.cext import parse
@@ -118,14 +123,17 @@ def test_parse_type_str():
 
 
 
-def test_type_slots():
-    ts = cext.slot_names
-    tps = cext.all_slots
-    it = itertools.zip_longest(ts, tps, fillvalue=None)
-    for i, (n1, (t, n2)) in enumerate(it):
-        assert n1 == n2
+# def test_type_slots():
+#     ts = cext.slot_names
+#     tps = cext.all_slots
+#     it = itertools.zip_longest(ts, tps, fillvalue=None)
+#     for i, (n1, (t, n2)) in enumerate(it):
+#         assert n1 == n2
 
-
+def test_type_to_str():
+    tts = type_from_str
+    assert tts("const char *") == CPointer(char, 1, True)
+    assert tts
 
 
 if __name__ == '__main__':
