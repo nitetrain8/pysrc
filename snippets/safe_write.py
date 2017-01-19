@@ -35,7 +35,7 @@ def safe_pickle(obj, filepath, **kwargs):
     temp = BytesIO()
     pickle_dump(obj, temp, **kwargs)
 
-    tail, head = path_split(filepath)
+    tail, _ = path_split(filepath)
     if not path_exists(tail):
         makedirs(tail)
 
@@ -48,7 +48,7 @@ def safe_json(obj: object, filepath: str, **kwargs):
     kwargs['indent'] = kwargs.get('indent', 4)
     json_dump(obj, temp, **kwargs)
 
-    tail, head = path_split(filepath)
+    tail, _ = path_split(filepath)
     if not path_exists(tail):
         makedirs(tail)
 

@@ -15,6 +15,8 @@ from datetime import datetime
 from traceback import format_exc
 from os.path import exists as path_exists, split as path_split
 from os import makedirs
+import sys
+import os
 
 _now = datetime.now
 
@@ -30,7 +32,7 @@ class Logger():
     var _logdateformat: strftime compatible date format for each logger entry
     """
 
-    _cacheroot = "C:\\.replcache\\"
+    _cacheroot = "C:\\users\\nathan\\documents\\personal\\test\\"
     _docroot = _cacheroot + "log\\"
     _default_logname = "LoggerLog"
 
@@ -102,7 +104,7 @@ class Logger():
         return state
         
     def __setstate__(self, state):
-        self.__dict__._update_data(state)
+        self.__dict__.update(state)
         self._logbuf = StringIO()
 
     def _get_log_name(self):
@@ -192,22 +194,19 @@ class FixREPLFormatter(logging.Formatter):
 
 
 class BuiltinLogger(logging.Logger):
-    _docroot = "C:\\.replcache\\log\\"
+    _cacheroot = "C:\\users\\nathan\\documents\\personal\\test\\"
+    _docroot = _cacheroot + "log\\"
 
     def __init__(self, name, level=logging.DEBUG, path=_docroot):
         logging.Logger.__init__(self, name, level)
-
-        import sys
-        import os
-
-        format = "%(created)f %(levelname)s <%(funcName)s>: %(message)s"
-        h1 = logging.StreamHandler(sys.stderr)
-        f1 = FixREPLFormatter(format,
-                              logging.Formatter.default_time_format)
+        os.makedirs(path, exist_ok=True)
+        format = "%(asctime)s %(levelname)s <%(funcName)s>: %(message)s"
+        date_fmt = "%m/%d/%y %H:%M:%S"
+        h1 = logging.StreamHandler(sys.stdout)
+        f1 = FixREPLFormatter(format, date_fmt)
 
         h2 = logging.FileHandler(os.path.join(path, name + ".log"))
-        f2 = logging.Formatter(format,
-                               logging.Formatter.default_time_format)
+        f2 = logging.Formatter(format, date_fmt)
 
         for h in (h1, h2):
             self.addHandler(h)
