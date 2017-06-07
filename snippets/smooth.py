@@ -33,19 +33,18 @@ def smooth1(xd, yd):
     @rtype:
     """
     decimal = D
-
     xd = tuple(map(round, xd))
     yd = tuple(map(decimal, yd))
 
-    x_prev = xd[0]
+    x_prev = x_start = xd[0]
     x_end = xd[-1]
     y_start = y_prev = yd[0]
 
-    y_data = [y_start] * (x_end + 1)
+    y_data = [y_start] * (x_end + 1 - x_start)
 
     data = zip(xd, yd)
     next(data)
-
+    
     for x_next, y_next in data:
 
         # minimize necessary calculation by factoring out constants
@@ -53,11 +52,11 @@ def smooth1(xd, yd):
         const_portion = ydiff_over_tdiff * x_prev - y_prev
 
         for i in range(x_prev + 1, x_next + 1):
-            y_data[i] = i * ydiff_over_tdiff - const_portion
+            y_data[i-x_start] = i * ydiff_over_tdiff - const_portion
 
         x_prev = x_next
         y_prev = y_next
-
-    x_data = list(range(len(y_data)))
+    x_data = list(range(xd[0], len(y_data)+xd[0]))
+    y_data = list(map(float, y_data))
 
     return x_data, y_data

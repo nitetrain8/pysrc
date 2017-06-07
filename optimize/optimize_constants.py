@@ -50,7 +50,7 @@ def _hack_recursive_func(new_func, old_func):
     strong reference to the co_consts tuple, with a callback called when
     the function is deleted.
 
-    3) With function deleted, we now have a tuple with an invald reference,
+    3) With function deleted, we now have a tuple with an invalid reference,
     but we know which index contains that reference. Use capi again to
     quietly re-write the tuple index to contain Py_None, then delete
     the local tuple reference. See _func_hack_callback for the function code

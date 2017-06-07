@@ -57,7 +57,7 @@ def _func_hack_callback(hackref):
 
     But, we can be reasonably sure that the refcount is zero, so we can
      override that item. We don't have to worry about Py_DECREF being called
-     on an undefined object because of our shoice of function, but if the C API
+     on an undefined object because of our choice of function, but if the C API
      implementation changed, we would.
 
     @param hackref: _FuncHackRef
