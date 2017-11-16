@@ -25,7 +25,7 @@ class MFPApi():
     _weight_progress_url = "http://www.myfitnesspal.com/reports/results/progress/1/%d.json"
     _login_url = "https://www.myfitnesspal.com/account/login"
     _food_diary_url = "https://www.myfitnesspal.com/food/diary?date=%s"
-    _copy_meal_url = "https://www.myfitnesspal.com/food/copy_meal?date=%s&from_date=%s&meal=%d&username=%s"
+    _copy_meal_url = "https://www.myfitnesspal.com/food/copy_meal?date=%s&from_date=%s&from_meal=%d&username=%s"
 
     # Enums for copy meal
     BREAKFAST = 0
@@ -205,6 +205,8 @@ def extract_calories(user='nitetrain8', pw='081089', months=10, year=2015, start
     with open(mfp_doc, 'w') as doc:
         for line in cal_list:
             doc.write("%s\t%s\n" % line)
+
+MFP = MFPApi
 
 
 def to_excel():

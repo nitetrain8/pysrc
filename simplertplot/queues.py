@@ -102,7 +102,7 @@ class InfiniteBuffer():
         remaining = 4096 - self.empty_sz
         self._itemsize = dtype().itemsize
         assert not (remaining % self._itemsize)
-        initial = remaining / self._itemsize
+        initial = remaining // self._itemsize
         item_per_pg, zero = divmod(4096, self._itemsize)
         assert zero == 0
         if initial < initial_size:

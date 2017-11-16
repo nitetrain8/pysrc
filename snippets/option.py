@@ -16,6 +16,7 @@ class OptionMeta(type):
 
 
 class OptionCategory(metaclass=OptionMeta):
+    _fields_ = []
     def __iter__(self):
         cd = self.__class__.__dict__
         sd = self.__dict__
