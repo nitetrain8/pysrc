@@ -20,6 +20,9 @@ import os
 
 _now = datetime.now
 
+_g_cacheroot = "C:\\users\\nathan\\documents\\personal\\test\\"
+if not os.path.exists("C:\\users\\nathan"):
+    _g_cacheroot = "C:\\users\\natha\\documents\\personal\\test\\"
 
 class Logger():
     """ Simple logger. Use as mixin or
@@ -32,7 +35,7 @@ class Logger():
     var _logdateformat: strftime compatible date format for each logger entry
     """
 
-    _cacheroot = "C:\\users\\nathan\\documents\\personal\\test\\"
+    _cacheroot = _g_cacheroot
     _docroot = _cacheroot + "log\\"
     _default_logname = "LoggerLog"
 
@@ -194,7 +197,7 @@ class FixREPLFormatter(logging.Formatter):
 
 
 class BuiltinLogger(logging.Logger):
-    _cacheroot = "C:\\users\\nathan\\documents\\personal\\test\\"
+    _cacheroot = _g_cacheroot
     _docroot = _cacheroot + "log\\"
 
     def __init__(self, name, level=logging.DEBUG, path=_docroot):
