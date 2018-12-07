@@ -357,11 +357,9 @@ def do_click():
     mouse_move(x, y)
     
 def set_topmost(hwnd):
-    GWL_EXSTYLE = -20
-    WS_EX_TOPMOST = 0x00000008
-    dwExStyle = win32gui.GetWindowLong(hwnd, GWL_EXSTYLE);
-    dwExStyle |= WS_EX_TOPMOST;
-    win32gui.SetWindowLong(hwnd, GWL_EXSTYLE, dwExStyle);
+    import win32gui
+    import win32con
+    win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 100, 100, 300, 200, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE) 
     
 def allow_set_foreground():
     if not ctypes.windll.user32.AllowSetForegroundWindow(os.getpid()):
@@ -428,7 +426,7 @@ def sendkeys(wait=0.05):
     space.grid(row=1, column=col())
     stop.grid(row=1, column=col())
     set_topmost(r.winfo_id())
-    
+
     r.mainloop()
     do_click_if_space = False
     space_clicker.join()
