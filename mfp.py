@@ -6,6 +6,7 @@ import urllib.parse
 import pyquery
 import json
 from collections import OrderedDict
+from http.client import HTTPException
 
 
 def fudge_cal(cal):
@@ -63,25 +64,46 @@ class MFPApi():
         self.login()
 
     def login(self):
+        self._login(self.session)
 
-        self.login_data = urllib.parse.urlencode(
+    def _login(self, session):
+
+        login_data = urllib.parse.urlencode(
             {'username': self.user,
              'password': self.password}
         ).encode('utf-8')
 
-        response = self.session.post(self._login_url, data=self.login_data)
-        if response.status_code != 200:
-            raise ValueError("Login failed")
-        print("Login Successful", flush=True)
+        response = session.post(self._login_url, data=login_data)
+        
+        # this is kind of hacky but the easiest way to to tell if the POST was
+        # actually successful or returned a "200 wrong usr/pw try again lol"
+
+        if 'form class="form login LoginForm"' in response.content.decode():
+            raise HTTPException("401 bad auth")
+        
+        #print("Login Successful", flush=True)
 
     def load_cals(self, date):
+        return self._load_cals(date, self.session)
+
+    def _download_cals(self, date, session):
         ds = _dt2ds(date)
         date_url = self._food_diary_url % ds
-        source = self.session.get(date_url).content
-        p = pyquery.PyQuery(source)
+        rsp = session.get(date_url)
+        if rsp.status_code != 200:
+            raise HTTPException(rsp.status_code)
+        return rsp.content
 
+    def _load_cals(self, date, session):
+        source = self._download_cals(date, session)
+        return self._parse_cals(source)
+
+    def _parse_cals(self, source):
+        p = pyquery.PyQuery(source.decode())
         totals = p("#diary-table > tbody > .total")
-        cals = None
+        cals = 0
+        if not totals:
+            raise HTTPException("401 bad auth?")
         for t in totals:
             if t.attrib['class'] != 'total':
                 continue
@@ -90,7 +112,6 @@ class MFPApi():
                 sc = t[1].text
                 cals = int(sc.replace(",", ""))
                 break
-
         return cals
 
     def _extract_weights(self, days):
@@ -126,6 +147,70 @@ class MFPApi():
         if back:
             data = data[:-back]
         assert data[-1][0] == end_date
+        return data
+
+    def load_cals_range_async(self, start_date, end_date, nthreads=48):
+        import threading, queue, time
+        day = datetime.timedelta(days=1)
+        current = start_date
+        days = queue.Queue()
+        results = queue.Queue()
+        ndays = (end_date - start_date).days + 1
+        
+        # yes, making this number very high really does
+        # make it go WAY faster... [edit: moved to param list]
+        # nthreads = 48
+
+        while current <= end_date:
+            days.put(current)
+            current += day
+        
+        for _ in range(nthreads):
+            days.put(None)  # sentinel
+        
+        def worker(iq, oq, s):
+            while True:
+                day = iq.get()
+                if day is None:
+                    break  # all done
+                iq.task_done()
+                while True:
+                    try:
+                        html = self._download_cals(day, s)
+                    except HTTPException:
+                        pass  # retry
+                    else:
+                        break
+                oq.put((day, html))
+            #print("thread exiting")
+
+        threads = set()
+        for i in range(nthreads):
+            s = requests.Session()
+            s.cookies = self.session.cookies  # assumes we logged in already
+            thread = threading.Thread(None, target=worker, args=(days, results, s), daemon=True)
+            thread.start()
+            threads.add(thread)
+        
+        while threads:
+            active = threads.copy()
+            for a in active:
+                if not a.is_alive():
+                    threads.remove(a)
+            print("\rDownloaded %d of %d (%d active threads)...       " % (results.qsize(), ndays, len(threads)), end="")
+            time.sleep(0.200)
+        print()
+
+        data = []
+        while True:
+            try:
+                day, html = results.get_nowait()
+            except queue.Empty:
+                break
+            cals = self._parse_cals(html)
+            data.append((day, cals))
+            print("\rParsing %d of %d                "%(len(data), ndays), end="")
+        print()
         return data
 
     def load_cals_range(self, start_date, end_date):
